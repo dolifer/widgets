@@ -97,6 +97,8 @@ test('the checks catch the usual mistakes', () => {
     [(w) => { w.states[0].entities = { 'Not An Id': 1 }; }, /property name|propertyNames|must match pattern/],
     [(w) => { w.script = 'missing.js'; }, /not in/],
     [(w) => { w.states[0].colour = 'x'; }, /additional properties/],
+    [(w) => { w.states[0].language = 'de'; }, /not in preview\.languages/],
+    [(w) => { w.preview = { languages: ['uk'] }; }, /language en is not in/],
   ];
   for (const [breakIt, re] of cases) {
     const w = good(); breakIt(w);

@@ -26,7 +26,7 @@ const ui = {
   state: W.states.find((s) => s.id === q.get('state')) || W.states[0],
   theme: q.get('theme'),
   width: parseInt(q.get('w'), 10) || W.width,
-  lang: q.get('lang'),
+  lang: W.languages.includes(q.get('lang')) ? q.get('lang') : null,
   off: (parseFloat(q.get('t')) || 0) * 6e4,
   speed: 60,       // preview minutes per real second
   playing: false,
@@ -35,7 +35,9 @@ let t0 = 0, card = null, raf = 0, lastTick = 0;
 
 const WIDTHS = [[320, 'Phone'], [W.width, 'Card'], [Math.max(600, W.width + 160), 'Wide']]
   .filter(([w], i, a) => a.findIndex(([x]) => x === w) === i);
-const LANGS = [['', 'State default'], ['en', 'English'], ['uk', 'Українська'], ['de', 'Deutsch']];
+// Only the languages the widget declares: the card has no text for any other.
+const langName = (code) => { try { const n = new Intl.DisplayNames([code], { type: 'language' }).of(code); return n.charAt(0).toLocaleUpperCase(code) + n.slice(1); } catch { return code; } };
+const LANGS = [['', 'State default'], ...W.languages.map((c) => [c, langName(c)])];
 
 function layout() {
   if (embed) {

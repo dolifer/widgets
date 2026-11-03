@@ -8,6 +8,7 @@ script: power-schedule-card.js
 preview:
   width: 420
   language: uk
+  languages: [uk, en]
   clock: "18:20"
 config:
   entity: binary_sensor.grid

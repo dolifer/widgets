@@ -43,11 +43,13 @@ export function checkWidget(dir, widget, validate) {
     const v = /\bVERSION\s*=\s*['"]([^'"]+)['"]/.exec(src);
     if (v && v[1] !== widget.version) errs.push(`version ${widget.version} differs from VERSION '${v[1]}' in ${widget.script}`);
   }
+  const langs = widget.preview?.languages || ['en'];
   const ids = new Set();
   for (const st of widget.states) {
     if (ids.has(st.id)) errs.push(`states: id ${st.id} is used twice`);
     ids.add(st.id);
     const scn = scenario(widget, st);
+    if (!langs.includes(scn.language)) errs.push(`states/${st.id}: language ${scn.language} is not in preview.languages [${langs.join(', ')}]`);
     if (scn.span <= 0) errs.push(`states/${st.id}: duration must be more than 0`);
     for (const e of scn.timeline) {
       if (e.off < 0) errs.push(`states/${st.id}: timeline event at ${e.at} is before the start`);
@@ -109,6 +111,7 @@ function widgetData(w) {
   return {
     id: w.id, name: w.name, version: w.version, description: w.description || '', tag: w.tag, script: w.script,
     width: w.preview?.width || 420,
+    languages: w.preview?.languages || ['en'],
     states: w.states.map((st) => {
       const scn = scenario(w, st);
       return { ...scn, yaml: yaml.dump(scn.config, { lineWidth: 100 }) };

@@ -56,6 +56,12 @@ properties:
     properties:
       width: { type: integer, minimum: 200, maximum: 1200, description: "Card width in px (default 420)" }
       language: { $ref: "#/definitions/language" }
+      languages:
+        description: Languages the card speaks; the preview offers only these (default [en])
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: { $ref: "#/definitions/language" }
       theme: { $ref: "#/definitions/theme" }
       clock: { $ref: "#/definitions/clock" }
   config:
