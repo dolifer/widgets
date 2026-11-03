@@ -1,0 +1,28 @@
+name: CI
+
+# Validates every widget.yaml, runs the tests and builds the preview site.
+# Pages deploys from main in pages.yml; this is the check on a PR.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Self-hosted only: hosted minutes are billed. The `widgets` runner lives
+    # in CT 102 with the other repos' runners (dolifer/homelab, docs/CI-RUNNERS.md).
+    runs-on: [self-hosted, widgets]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - run: node --version
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - run: npm run build

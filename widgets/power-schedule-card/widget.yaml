@@ -1,0 +1,141 @@
+name: Power schedule
+version: 1.0.1
+description: >
+  Whether the power is on now and for how long, and what the outage schedule
+  says comes next: an outage or the power coming back, with a countdown.
+tag: power-schedule-card
+script: power-schedule-card.js
+preview:
+  width: 420
+  language: uk
+  clock: "18:20"
+config:
+  entity: binary_sensor.grid
+  next_outage: sensor.next_outage
+  next_restore: sensor.next_restore
+
+states:
+  - id: on-outage-next
+    title: Power on, outage at 20:00
+    description: Move the clock past 20:00 to watch the outage start and the restore countdown take over.
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+5h40m
+      - at: now+5h40m
+        note: Power back on time
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_outage: now+9h40m
+          sensor.next_restore: unknown
+
+  - id: off-restore-tomorrow
+    title: No power, back tomorrow
+    description: The restore time is on another day, so the date shows too.
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-1m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now+5h40m
+    duration: 7h
+    timeline:
+      - at: now+5h40m
+        note: Power back
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_outage: now+12h
+          sensor.next_restore: unknown
+
+  - id: restore-late
+    title: Restore running late
+    description: The schedule said 18:00, the power is still off.
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-3h20m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now-20m
+    timeline:
+      - at: now+35m
+        note: Power finally back
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_restore: unknown
+          sensor.next_outage: now+4h
+
+  - id: nothing-planned
+    title: No outages planned
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-2d5h }
+      sensor.next_outage: unknown
+      sensor.next_restore: unknown
+
+  - id: schedule-down
+    title: Schedule unavailable
+    description: The schedule integration is down; the power state still shows.
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-40m }
+      sensor.next_outage: unavailable
+      sensor.next_restore: unavailable
+
+  - id: grid-unknown
+    title: Power sensor unavailable
+    entities:
+      binary_sensor.grid: unavailable
+      sensor.next_outage: now+3h
+      sensor.next_restore: unknown
+
+  - id: combined-emergency
+    title: Combined sensor, emergency outage
+    description: One sensor holding kind|time, as a template sensor can build it.
+    config:
+      next_outage: null
+      next_restore: null
+      schedule: sensor.next_power_event
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-30m }
+      sensor.next_power_event: emergency
+    timeline:
+      - at: now+50m
+        note: Grid operator posts a restore time
+        set:
+          sensor.next_power_event: restore|{now+1h50m}
+      - at: now+1h50m
+        note: Power back
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_power_event: clear
+
+  - id: english-inverted
+    title: English, inverted sensor, own colours
+    description: An outage sensor that is "on" during an outage, with invert, custom colours and a lower card.
+    language: en
+    theme: light
+    config:
+      entity: binary_sensor.power_outage
+      invert: true
+      height: 130
+      colors: { on: "#2e7d32", warn: "#ef6c00" }
+    entities:
+      binary_sensor.power_outage: { state: "off", changed: now-6h12m }
+      sensor.next_outage: now+25m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+25m
+        note: Outage starts
+        set:
+          binary_sensor.power_outage: "on"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h25m
+
+  - id: no-schedule
+    title: Power only, no schedule configured
+    config:
+      next_outage: null
+      next_restore: null
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-2h }

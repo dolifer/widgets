@@ -1,0 +1,96 @@
+# The shape of widgets/<id>/widget.yaml. The build validates every widget
+# against this, then generates its preview page from it.
+$schema: http://json-schema.org/draft-07/schema#
+title: Widget
+type: object
+additionalProperties: false
+required: [name, version, tag, script, states]
+definitions:
+  timeToken:
+    description: "now, now+1h40m, now-2d, … (d h m s), or an ISO time"
+    type: string
+    pattern: "^(now\\s*([+-]\\s*(\\d+(\\.\\d+)?[dhms])+)?|\\d{4}-\\d{2}-\\d{2}T.+)$"
+  entityId:
+    type: string
+    pattern: "^[a-z_]+\\.[a-z0-9_]+$"
+  entityValue:
+    description: >
+      A state on its own ("on", 21.5, now+2h), or the full form. A state that
+      is a time token becomes an ISO time, as timestamp sensors hold.
+    oneOf:
+      - type: [string, number, boolean, "null"]
+      - type: object
+        additionalProperties: false
+        properties:
+          state: { type: [string, number, boolean, "null"] }
+          changed: { $ref: "#/definitions/timeToken", description: "last_changed; default: the start, or when a timeline event changed the state" }
+          attributes: { type: object }
+  entities:
+    type: object
+    propertyNames: { $ref: "#/definitions/entityId" }
+    additionalProperties: { $ref: "#/definitions/entityValue" }
+  clock:
+    description: "Start the scenario at this local time today (HH:MM), so times look the same on every run"
+    type: string
+    pattern: "^\\d{1,2}:\\d{2}$"
+  language: { type: string, pattern: "^[a-z]{2}(-[A-Za-z]{2})?$" }
+  theme: { enum: [dark, light] }
+properties:
+  name: { type: string, minLength: 1 }
+  description: { type: string }
+  version:
+    description: Semver. A release tag <id>-v<version> must match it, and so must a VERSION constant in the script
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+  tag:
+    description: The custom element the script defines (type is custom:<tag>)
+    type: string
+    pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)+$"
+  script:
+    description: The card's JS file, next to widget.yaml
+    type: string
+    pattern: "^[\\w.-]+\\.m?js$"
+  preview:
+    type: object
+    additionalProperties: false
+    properties:
+      width: { type: integer, minimum: 200, maximum: 1200, description: "Card width in px (default 420)" }
+      language: { $ref: "#/definitions/language" }
+      theme: { $ref: "#/definitions/theme" }
+      clock: { $ref: "#/definitions/clock" }
+  config:
+    description: Card config shared by every state; `type` is added for you
+    type: object
+  states:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, title, entities]
+      properties:
+        id: { type: string, pattern: "^[a-z0-9]+(-[a-z0-9]+)*$" }
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        language: { $ref: "#/definitions/language" }
+        theme: { $ref: "#/definitions/theme" }
+        clock: { $ref: "#/definitions/clock" }
+        config:
+          description: Merged over the shared config; null removes a key
+          type: object
+        entities: { $ref: "#/definitions/entities" }
+        duration:
+          description: "How far the clock slider goes, e.g. 6h (default: an hour past the last event)"
+          type: string
+          pattern: "^(\\d+(\\.\\d+)?[dhms])+$"
+        timeline:
+          description: Changes that happen as the clock moves on
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [at, set]
+            properties:
+              at: { $ref: "#/definitions/timeToken" }
+              note: { type: string }
+              set: { $ref: "#/definitions/entities" }

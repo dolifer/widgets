@@ -1,0 +1,19 @@
+{
+  "name": "widgets",
+  "private": true,
+  "type": "module",
+  "description": "Home Assistant cards with generated state previews",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "check": "node tools/build.mjs --check",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "test:render": "node tests/render.mjs",
+    "serve": "node tools/serve.mjs",
+    "release": "node tools/release.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "js-yaml": "4.1.0"
+  }
+}

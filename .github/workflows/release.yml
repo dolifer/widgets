@@ -1,0 +1,50 @@
+name: Release
+
+# One widget, one release: push a tag <widget>-v<semver>, for example
+#   git tag power-schedule-card-v1.0.1 && git push origin power-schedule-card-v1.0.1
+# The tag's version must equal that widget's widget.yaml (and the script's
+# VERSION, which the build checks). The release carries
+# <widget>-<version>.zip: the card JS, its README and a hacs.json.
+on:
+  push:
+    tags: ['*-v[0-9]*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: [self-hosted, widgets]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # the notes compare with the widget's previous tag
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - name: Pack
+        id: pack
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          zip_path=$(node tools/release.mjs "$TAG")
+          echo "zip=$zip_path" >> "$GITHUB_OUTPUT"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          ZIP: ${{ steps.pack.outputs.zip }}
+        run: |
+          widget="${TAG%-v*}"
+          prev=$(git tag --list "${widget}-v*" --sort=-v:refname | grep -vx "$TAG" | head -n1 || true)
+          {
+            echo "Widget: \`$widget\`, version ${TAG##*-v}."
+            echo
+            if [ -n "$prev" ]; then
+              echo "Changes since $prev:"
+              git log --format='- %s' "$prev..$TAG" -- "widgets/$widget"
+            else
+              echo "First release."
+            fi
+          } > notes.md
+          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file notes.md --verify-tag
