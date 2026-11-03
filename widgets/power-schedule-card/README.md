@@ -58,6 +58,10 @@ labels:
   restore: Включення
 colors:
   warn: '#ff9800'
+show_next_icon: false
+icons:
+  power_on: mdi:home-lightning-bolt
+  outage: mdi:transmission-tower-off
 ```
 
 A template sensor that builds the combined form from two timestamp sensors (put it in `configuration.yaml`, adjust the entity ids):
@@ -86,9 +90,13 @@ template:
 | `attribute` | — | Read the time from this attribute of the timestamp sensors instead of their state |
 | `schedule` | — | One sensor with `kind\|ISO time`; wins over the two above |
 | `height` | `150` | Card height in px (130–400) |
+| `layout` | `stacked` | `stacked`: now on top, next below. `horizontal`: now on the left, next on the right |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
 | `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
 | `colors` | — | `on`, `off`, `warn`, `unknown`: any CSS colour |
+| `show_now_icon` | `true` | Icon in the top half (power now) |
+| `show_next_icon` | `true` | Icon in the bottom half (what comes next) |
+| `icons` | — | Replace any icon with an `mdi:` one. Keys: `power_on`, `power_off`, `power_unknown` (top); `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown` (bottom) |
 
 Tapping either half opens that entity's more-info dialog.
 

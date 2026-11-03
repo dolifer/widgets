@@ -29,6 +29,11 @@ let failed = 0, checked = 0;
 
 const { offsetOf } = await import('../tools/preview/scenario.mjs');
 const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+// mdi icons come from jsDelivr on the site; here a fixed square stands in, so
+// the test runs offline and measures the same.
+await page.route('https://cdn.jsdelivr.net/npm/@mdi/svg@*/svg/*.svg', (route) => route.fulfill({
+  contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/></svg>',
+}));
 let errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });

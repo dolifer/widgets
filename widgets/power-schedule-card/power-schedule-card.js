@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.0.2';
+  const VERSION = '1.1.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -60,6 +60,27 @@
     unscheduled: { color: 'off', sub: 'time_unknown' },
     no_schedule: { color: 'unknown' },
     unknown: { color: 'unknown' },
+  };
+
+  // Built-in icons, one per state, drawn in the half's colour (24×24 strokes).
+  // `icons:` in the config replaces any of them with an mdi: icon.
+  const RING = '<circle cx="12" cy="12" r="10"/>';
+  const BOLT = '<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z" stroke-linejoin="round"/>';
+  const CAL = '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>';
+  const WARN = '<path d="M12 3 2 20.5h20z" stroke-linejoin="round"/><path d="M12 10v4.5"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/>';
+  const ASK = '<path d="M9.4 9.3a2.7 2.7 0 1 1 3.8 2.5c-.8.4-1.2 1-1.2 1.8v.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>';
+  const SVG = {
+    power_on: RING + '<path d="M7 12.5l3.2 3.2L17 9"/>',
+    power_off: RING + '<path d="M8 8l8 8M16 8l-8 8"/>',
+    power_unknown: RING + ASK,
+    outage: BOLT + '<path d="M3.5 3.5l17 17"/>',
+    restore: BOLT,
+    overdue: RING + '<path d="M12 6.5V12l3.5 2"/>',
+    clear: CAL + '<path d="M8.5 15.5l2.3 2.3 4.7-4.7"/>',
+    emergency: WARN,
+    unscheduled: WARN,
+    no_schedule: CAL + '<path d="M9.5 13l5 5M14.5 13l-5 5"/>',
+    unknown: RING + ASK,
   };
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -126,6 +147,15 @@
 
     _state(id) { return id ? this._hass?.states?.[id] : undefined; }
 
+    // The icon for a state key in `color`: the config's mdi: icon, or the built-in one.
+    _icon(key, color, size) {
+      const custom = this.config.icons?.[key];
+      if (typeof custom === 'string' && /^[a-z0-9_-]+:[a-z0-9_-]+$/i.test(custom)) {
+        return `<span class="ic" style="color:${color};--mdc-icon-size:${size}px;width:${size}px;height:${size}px"><ha-icon icon="${esc(custom)}"></ha-icon></span>`;
+      }
+      return `<span class="ic" style="color:${color};width:${size}px;height:${size}px"><svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${SVG[key] || SVG.unknown}</svg></span>`;
+    }
+
     // Power now: true (on), false (off) or null (unknown).
     _powerOn() {
       const s = this._state(this.config.entity);
@@ -180,11 +210,10 @@
       const since = this._state(c.entity)?.last_changed;
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
       const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : 'off');
-      const icon = powerOn === null ? ''
-        : powerOn
-          ? `<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="${nowColor}" stroke-width="2"/><path d="M7 12.5l3.2 3.2L17 9" stroke="${nowColor}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`
-          : `<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="${nowColor}" stroke-width="2"/><path d="M8 8l8 8M16 8l-8 8" stroke="${nowColor}" stroke-width="2.2" stroke-linecap="round"/></svg>`;
-      const nowTitle = this._t(powerOn === null ? 'power_unknown' : powerOn ? 'power_on' : 'power_off');
+      const horiz = c.layout === 'horizontal';
+      const nowKey = powerOn === null ? 'power_unknown' : powerOn ? 'power_on' : 'power_off';
+      const icon = c.show_now_icon === false ? '' : this._icon(nowKey, nowColor, horiz ? 20 : 28);
+      const nowTitle = this._t(nowKey);
 
       const next = this._next(powerOn);
       let nextHtml = '';
@@ -200,8 +229,9 @@
             : `${pad(next.at.getDate())}.${pad(next.at.getMonth() + 1)} ${hhmm(next.at)}`;
         }
         nextHtml = `
-          <div class="seam" aria-hidden="true">↓</div>
-          <div class="next" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
+          <div class="seam" aria-hidden="true">${horiz ? '→' : '↓'}</div>
+          <div class="next${c.show_next_icon === false ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
+            ${c.show_next_icon === false ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24)}
             <div class="nx"><span class="lbl">${esc(this._t('next'))}</span>
               <strong>${esc(this._t(next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
             ${when ? `<div class="when">${esc(when)}</div>` : ''}
@@ -214,8 +244,8 @@
       const seamL = height - SEAM_BOTTOM, seamR = SEAM_TOP;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
-          <div class="split${next ? '' : ' solo'}" style="height:${height}px;--tint:${nowColor};--seam-l:${seamL}px;--seam-r:${seamR}px">
-            <div class="now" data-more="${esc(c.entity)}">${icon}<div class="txt">
+          <div class="split${horiz ? ' h' : ''}${next ? '' : ' solo'}" style="height:${height}px;--tint:${nowColor};${horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%` : `--seam-l:${seamL}px;--seam-r:${seamR}px`}">
+            <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${icon}<div class="txt">
               <span class="lbl">${esc(this._t('now'))}</span>
               <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div></div>
             ${nextHtml}
@@ -233,6 +263,10 @@
   // edge and SEAM_TOP px below the top at the right; the arrow sits on its
   // midpoint. Each text block is 10 px padding + 46 px of text.
   const SEAM_TOP = 62, SEAM_BOTTOM = 62;
+  // layout: horizontal puts "now" on the left and "next" on the right. The
+  // seam leans from SEAM_H_TOP % of the width at the top to SEAM_H_BOTTOM %
+  // at the bottom; each side keeps its text clear of the seam's nearest point.
+  const SEAM_H_TOP = 55, SEAM_H_BOTTOM = 45;
   const CSS = `
     :host { display:block }
     ha-card { overflow:hidden; height:100% }
@@ -242,17 +276,37 @@
     .now, .next { position:absolute; inset:0; box-sizing:border-box; display:flex; gap:12px; padding:0 14px; cursor:pointer }
     .now { align-items:flex-start; padding-top:10px }
     .solo .now { align-items:center; padding-top:0 }
-    .next { align-items:flex-end; padding-bottom:10px; justify-content:space-between; gap:8px;
+    .next { align-items:flex-end; padding-bottom:10px; gap:10px;
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
     .txt, .nx { min-width:0 }
     .nx { flex:1 }
-    svg { flex:none }
+    .ic { flex:none; display:inline-flex; align-items:center; justify-content:center }
+    .ic ha-icon { --mdc-icon-size: inherit; display:inline-flex }
+    /* Centred on the 46 px text block beside each. */
+    .now .ic { margin-top:9px }
+    .solo .now .ic { margin-top:0 }
+    .next .ic { margin-bottom:11px; margin-right:2px }
     .lbl { display:block; font-size:10px; line-height:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--secondary-text-color) }
     strong { display:block; font-weight:500; font-size:16px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
     .next strong { font-size:14px; line-height:18px }
     .sub { display:block; color:var(--secondary-text-color); font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .when { font-size:22px; line-height:26px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
+    .when { margin-left:auto; font-size:22px; line-height:26px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
+    /* Horizontal: each half is a grid. Icon and label share the first row, the
+       title (up to two lines) and the rest run the half's full width. */
+    .h .now, .h .next { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto auto 1fr;
+      align-items:start; align-content:start; gap:0 6px; padding:10px 14px }
+    .h .now { padding-right:calc(100% - var(--seam-b) + 8px) }
+    .h.solo .now { padding-right:14px }
+    .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
+    .h .txt, .h .nx { display:contents }
+    .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
+    .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
+    .h .wi .lbl { grid-column:2 }
+    .h strong { grid-column:1 / 3; margin-top:4px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
+    .h .sub { grid-column:1 / 3 }
+    .h .next .when { grid-column:1 / 3; grid-row:4; align-self:end; justify-self:end; margin:0 }
+    .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - 13px); top:calc(50% - 13px) }
     .seam { position:absolute; left:calc(50% - 13px); top:calc((var(--seam-l) + var(--seam-r)) / 2 - 13px); width:26px; height:26px; box-sizing:border-box; border-radius:50%;
       background:var(--bg); border:1px solid var(--divider-color, rgba(127,127,127,.25)); display:grid; place-items:center; font-size:14px; z-index:2 }
   `;

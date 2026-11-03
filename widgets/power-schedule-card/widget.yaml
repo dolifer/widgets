@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.0.2
+version: 1.1.0
 description: >
   Whether the power is on now and for how long, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -140,3 +140,78 @@ states:
       next_restore: null
     entities:
       binary_sensor.grid: { state: "on", changed: now-2h }
+
+  - id: icons-off
+    title: Icons hidden
+    description: show_now_icon and show_next_icon set to false.
+    config:
+      show_now_icon: false
+      show_next_icon: false
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
+
+  - id: custom-icons
+    title: Own icons (mdi)
+    description: Any state's icon replaced with an mdi icon; the rest keep the built-in ones.
+    config:
+      icons:
+        power_on: mdi:home-lightning-bolt
+        power_off: mdi:home-off
+        outage: mdi:transmission-tower-off
+        restore: mdi:transmission-tower
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-25m }
+      sensor.next_outage: now+50m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+50m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+3h50m
+
+  - id: horizontal
+    title: Side by side (layout horizontal)
+    description: Now on the left, next on the right; long titles wrap to two lines.
+    config:
+      layout: horizontal
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+29h40m
+      - at: now+3h
+        note: Schedule goes down
+        set:
+          sensor.next_restore: unavailable
+      - at: now+4h
+        note: Schedule back, nothing planned
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_outage: unknown
+          sensor.next_restore: unknown
+
+  - id: horizontal-unknown
+    title: Side by side, power sensor unavailable
+    config:
+      layout: horizontal
+    entities:
+      binary_sensor.grid: unavailable
+      sensor.next_outage: now+3h
+      sensor.next_restore: unknown
