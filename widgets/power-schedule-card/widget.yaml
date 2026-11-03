@@ -1,7 +1,7 @@
 name: Power schedule
-version: 1.1.0
+version: 1.2.0
 description: >
-  Whether the power is on now and for how long, and what the outage schedule
+  Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
 tag: power-schedule-card
 script: power-schedule-card.js
@@ -15,6 +15,10 @@ config:
   next_outage: sensor.next_outage
   next_restore: sensor.next_restore
 
+# The two halves always agree: while the power is off the top says why
+# (scheduled, emergency, unscheduled) and the bottom says when it comes back;
+# while it is on the bottom says when the next outage is. `expect` is the text
+# the card must show (in the state's language) at that point of the timeline.
 states:
   - id: on-outage-next
     title: Power on, outage at 20:00
@@ -23,6 +27,7 @@ states:
       binary_sensor.grid: { state: "on", changed: now-1h04m }
       sensor.next_outage: now+1h40m
       sensor.next_restore: unknown
+    expect: [Світло є, вже 1 г 04 хв, Відключення, через 1 г 40 хв, "20:00"]
     timeline:
       - at: now+1h40m
         note: Outage starts
@@ -30,12 +35,14 @@ states:
           binary_sensor.grid: "off"
           sensor.next_outage: unknown
           sensor.next_restore: now+5h40m
+        expect: [Немає світла, за графіком, Світло буде, через 4 г 00 хв, "00:00"]
       - at: now+5h40m
         note: Power back on time
         set:
           binary_sensor.grid: "on"
           sensor.next_outage: now+9h40m
           sensor.next_restore: unknown
+        expect: [Світло є, Відключення, "04:00", "!за графіком"]
 
   - id: off-restore-tomorrow
     title: No power, back tomorrow
@@ -44,6 +51,7 @@ states:
       binary_sensor.grid: { state: "off", changed: now-1m }
       sensor.next_outage: unknown
       sensor.next_restore: now+5h40m
+    expect: [Немає світла, вже 1 хв, за графіком, Світло буде]
     duration: 7h
     timeline:
       - at: now+5h40m
@@ -52,6 +60,7 @@ states:
           binary_sensor.grid: "on"
           sensor.next_outage: now+12h
           sensor.next_restore: unknown
+        expect: [Світло є, Відключення]
 
   - id: restore-late
     title: Restore running late
@@ -60,6 +69,7 @@ states:
       binary_sensor.grid: { state: "off", changed: now-3h20m }
       sensor.next_outage: unknown
       sensor.next_restore: now-20m
+    expect: [Немає світла, за графіком, Мали увімкнути, запізнюється, "18:00"]
     timeline:
       - at: now+35m
         note: Power finally back
@@ -67,6 +77,22 @@ states:
           binary_sensor.grid: "on"
           sensor.next_restore: unknown
           sensor.next_outage: now+4h
+        expect: [Світло є, Відключення]
+
+  - id: off-no-restore-time
+    title: No power, schedule has no restore time
+    description: Off with no outage in the schedule, so it is unscheduled and the restore time is unknown.
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-15m }
+      sensor.next_outage: unknown
+      sensor.next_restore: unknown
+    expect: [Немає світла, поза графіком, Світло буде, час невідомий, "!Відключень не заплановано"]
+    timeline:
+      - at: now+40m
+        note: Grid operator posts a restore time
+        set:
+          sensor.next_restore: now+2h
+        expect: [за графіком, Світло буде, через 1 г 20 хв]
 
   - id: nothing-planned
     title: No outages planned
@@ -74,6 +100,7 @@ states:
       binary_sensor.grid: { state: "on", changed: now-2d5h }
       sensor.next_outage: unknown
       sensor.next_restore: unknown
+    expect: [Світло є, Відключень не заплановано]
 
   - id: schedule-down
     title: Schedule unavailable
@@ -82,6 +109,7 @@ states:
       binary_sensor.grid: { state: "on", changed: now-40m }
       sensor.next_outage: unavailable
       sensor.next_restore: unavailable
+    expect: [Світло є, Графік недоступний]
 
   - id: grid-unknown
     title: Power sensor unavailable
@@ -89,6 +117,7 @@ states:
       binary_sensor.grid: unavailable
       sensor.next_outage: now+3h
       sensor.next_restore: unknown
+    expect: [Стан мережі невідомий]
 
   - id: combined-emergency
     title: Combined sensor, emergency outage
@@ -100,16 +129,38 @@ states:
     entities:
       binary_sensor.grid: { state: "off", changed: now-30m }
       sensor.next_power_event: emergency
+    expect: [Немає світла, вже 30 хв, екстрене, Світло буде, час невідомий, "!Екстрене відключення"]
     timeline:
       - at: now+50m
         note: Grid operator posts a restore time
         set:
           sensor.next_power_event: restore|{now+1h50m}
+        expect: [за графіком, Світло буде, через 1 г 00 хв, "20:10"]
       - at: now+1h50m
         note: Power back
         set:
           binary_sensor.grid: "on"
           sensor.next_power_event: clear
+        expect: [Світло є, Відключень не заплановано]
+
+  - id: combined-contradictions
+    title: Combined sensor out of step with the power
+    description: The schedule sensor says "clear" while the power is off, then "restore" while it is on. The card follows the power.
+    config:
+      next_outage: null
+      next_restore: null
+      schedule: sensor.next_power_event
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-10m }
+      sensor.next_power_event: clear
+    expect: [Немає світла, поза графіком, Світло буде, час невідомий, "!Відключень не заплановано"]
+    timeline:
+      - at: now+30m
+        note: Power back ahead of the schedule
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_power_event: restore|{now+2h}
+        expect: [Світло є, Наступне відключення невідоме, "!Світло буде"]
 
   - id: english-inverted
     title: English, inverted sensor, own colours
@@ -125,6 +176,7 @@ states:
       binary_sensor.power_outage: { state: "off", changed: now-6h12m }
       sensor.next_outage: now+25m
       sensor.next_restore: unknown
+    expect: [Power is on, for 6 h 12 min, Outage, in 25 min]
     timeline:
       - at: now+25m
         note: Outage starts
@@ -132,6 +184,7 @@ states:
           binary_sensor.power_outage: "on"
           sensor.next_outage: unknown
           sensor.next_restore: now+4h25m
+        expect: [No power, scheduled, Power back, in 4 h 00 min]
 
   - id: no-schedule
     title: Power only, no schedule configured
@@ -140,6 +193,7 @@ states:
       next_restore: null
     entities:
       binary_sensor.grid: { state: "on", changed: now-2h }
+    expect: [Світло є, вже 2 г 00 хв, "!Далі"]
 
   - id: icons-off
     title: Icons hidden
@@ -165,7 +219,7 @@ states:
     config:
       icons:
         power_on: mdi:home-lightning-bolt
-        power_off: mdi:home-off
+        power_planned: mdi:home-off
         outage: mdi:transmission-tower-off
         restore: mdi:transmission-tower
     entities:
@@ -196,16 +250,19 @@ states:
           binary_sensor.grid: "off"
           sensor.next_outage: unknown
           sensor.next_restore: now+29h40m
+        expect: [за графіком, Світло буде]
       - at: now+3h
         note: Schedule goes down
         set:
           sensor.next_restore: unavailable
+        expect: [Немає світла, Графік недоступний]
       - at: now+4h
-        note: Schedule back, nothing planned
+        note: Power back, nothing planned
         set:
           binary_sensor.grid: "on"
           sensor.next_outage: unknown
           sensor.next_restore: unknown
+        expect: [Світло є, Відключень не заплановано]
 
   - id: horizontal-unknown
     title: Side by side, power sensor unavailable
@@ -215,3 +272,117 @@ states:
       binary_sensor.grid: unavailable
       sensor.next_outage: now+3h
       sensor.next_restore: unknown
+
+  - id: align-center
+    title: Text centred (align center)
+    config:
+      align: center
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
+        expect: [за графіком, Світло буде]
+
+  - id: tall-right-center
+    title: Taller card, right-aligned, centred vertically
+    description: height 220 gives each half room; valign center puts each block in the middle of its half.
+    config:
+      height: 220
+      align: right
+      valign: center
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-20m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now+2h40m
+    expect: [Немає світла, за графіком, Світло буде, "21:00"]
+
+  - id: seam-icon
+    title: Next icon in the centre (seam_icon next)
+    description: The next state's icon replaces the arrow; the bottom half drops its own icon.
+    config:
+      seam_icon: next
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
+      - at: now+5h40m
+        note: Power back, nothing planned
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_restore: unknown
+
+  - id: horizontal-centered
+    title: Side by side, centred, next icon in the centre
+    config:
+      layout: horizontal
+      align: center
+      valign: center
+      seam_icon: next
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-50m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now+3h10m
+    expect: [Немає світла, за графіком, Світло буде]
+    timeline:
+      - at: now+3h10m
+        note: Power back
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_outage: now+8h
+          sensor.next_restore: unknown
+        expect: [Світло є, Відключення]
+
+  - id: horizontal-bottom-right
+    title: Side by side, right-aligned at the bottom
+    config:
+      layout: horizontal
+      align: right
+      valign: bottom
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-3h }
+      sensor.next_outage: now+45m
+      sensor.next_restore: unknown
+
+  - id: gradient
+    title: Gradient tint (gradient true)
+    description: Each half fades from its outer edge toward the seam instead of a flat tint.
+    config:
+      gradient: true
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
+        expect: [за графіком, Світло буде]
+
+  - id: gradient-horizontal
+    title: Gradient, side by side, centred icon
+    config:
+      gradient: true
+      layout: horizontal
+      seam_icon: next
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-15m }
+      sensor.next_outage: unknown
+      sensor.next_restore: unknown
+    expect: [Немає світла, поза графіком, час невідомий]

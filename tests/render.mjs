@@ -45,8 +45,9 @@ for (const w of widgets) {
   const langs = w.preview?.languages || ['en'];
   const widths = [...new Set([320, w.preview?.width || 420])];
   for (const st of w.states) {
-    const times = [0, ...(st.timeline || []).map((e) => Math.round(offsetOf(e.at) / 6e4))];
-    for (const mins of times) {
+    const stLang = st.language || w.preview?.language || 'en';
+    const times = [[0, st.expect], ...(st.timeline || []).map((e) => [Math.round(offsetOf(e.at) / 6e4), e.expect])];
+    for (const [mins, expect] of times) {
       const runs = [];
       for (const width of widths) for (const lang of langs) runs.push({ width, lang, theme: 'dark' });
       runs.push({ width: widths[widths.length - 1], lang: langs[0], theme: 'light' });
@@ -60,12 +61,20 @@ for (const w of widgets) {
             err: document.querySelector('.err')?.textContent,
             html: card?.shadowRoot?.innerHTML.length || 0,
             text: (card?.shadowRoot?.querySelector('ha-card') || card?.shadowRoot)?.textContent.replace(/\s+/g, ' ').trim().slice(0, 90),
+            full: (card?.shadowRoot?.querySelector('ha-card') || card?.shadowRoot)?.textContent.replace(/\s+/g, ' ').trim(),
             layout: card && src ? (0, eval)(src)(card) : [],
           };
         }, [w.tag, check]);
         checked++;
         const label = `${w.id} · ${st.id} · +${mins} min · ${width}px ${lang} ${theme}`;
         const bad = [r.err, ...errors, ...(r.html ? [] : ['card rendered nothing']), ...r.layout].filter(Boolean);
+        // The state's expect: list, checked in the state's own language.
+        if (lang === stLang && theme === 'dark') {
+          const text = r.full || '';
+          for (const x of expect || []) {
+            if (x.startsWith('!') ? text.includes(x.slice(1)) : !text.includes(x)) bad.push(`expected ${x.startsWith('!') ? 'no ' : ''}"${x.replace(/^!/, '')}" in "${text}"`);
+          }
+        }
         if (bad.length) { failed++; console.log(`✗ ${label}: ${bad.join('; ')}`); }
         else if (process.argv.includes('-v')) console.log(`✓ ${label}: ${r.text}`);
         if (shotsAt && theme === 'dark') {

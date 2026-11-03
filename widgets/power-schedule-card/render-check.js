@@ -33,7 +33,7 @@
   const out = [];
   const next = root.querySelector('.next');
   const seam = root.querySelector('.seam')?.getBoundingClientRect();
-  const nowItems = items('.now .lbl, .now strong, .now .sub, .now .ic');
+  const nowItems = items('.now .lbl, .now strong, .now .sub, .now .ic, .now .why');
   const nextItems = next ? items('.next .lbl, .next strong, .next .sub, .next .when, .next .ic') : [];
   for (const e of nowItems) {
     const r = ink(e);
@@ -54,11 +54,29 @@
   }
   const when = root.querySelector('.next .when');
   if (when) for (const e of items('.next .nx > *, .next .ic')) if (hit(ink(e), ink(when))) out.push(`${name(e)} overlaps the time`);
+  // The reason tag sits clear of the title and the duration.
+  const why = root.querySelector('.now .why');
+  if (why) for (const t of items('.now .lbl, .now strong, .now .sub')) if (hit(why.getBoundingClientRect(), ink(t))) out.push(`reason tag overlaps ${name(t)}`);
   // Each icon sits beside its text, not on it.
   for (const half of ['.now', '.next']) {
     const a = root.querySelector(`${half} .ic`);
-    if (a) for (const t of items(`${half} .lbl, ${half} strong, ${half} .sub, ${half} .when`)) {
+    if (a) for (const t of items(`${half} .lbl, ${half} strong, ${half} .sub, ${half} .when, ${half} .why`)) {
       if (hit(a.getBoundingClientRect(), ink(t))) out.push(`${half} icon overlaps ${name(t)}`);
+    }
+  }
+  // Reading order holds: label above the title above the duration. Side by
+  // side, the icon sits level with or above the label, within 8 px of it
+  // (stacked, it sits beside the whole block instead).
+  for (const half of ['.now', '.next']) {
+    const [lbl, title, sub] = ['.lbl', 'strong', '.sub'].map((s) => root.querySelector(`${half} ${s}`));
+    if (lbl && title && ink(title).top < ink(lbl).bottom - 1) out.push(`${half} title is above its label`);
+    if (title && sub && sub.textContent.trim() && ink(sub).top < ink(title).bottom - 1) out.push(`${half} duration is above its title`);
+    const a = root.querySelector(`${half} .ic`);
+    if (horiz && a && lbl) {
+      const r = a.getBoundingClientRect(), l = ink(lbl);
+      if (r.top > l.bottom) out.push(`${half} icon is below its label`);
+      const gap = Math.max(l.left - r.right, r.left - l.right, l.top - r.bottom, 0);
+      if (gap > 8) out.push(`${half} icon is ${Math.round(gap)} px from its label`);
     }
   }
   return out;

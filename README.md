@@ -67,6 +67,13 @@ language. If `widgets/<id>/render-check.js` exists, it runs after each render:
 a function of the card element that returns problems as strings (text
 crossing a seam, text cut off, …). Any problem fails the run.
 
+A state or timeline event may list `expect:` text the card must show at that
+point, in the state's language; a leading `!` means it must not appear:
+
+```yaml
+    expect: [Немає світла, за графіком, "!Відключень не заплановано"]
+```
+
 ## Releases
 
 Each widget is versioned on its own. Bump `version` in its `widget.yaml` and

@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -30,6 +30,8 @@
       outage: 'Outage', restore: 'Power back', overdue: 'Should be back',
       clear: 'No outages planned', emergency: 'Emergency outage', unscheduled: 'Unscheduled outage',
       no_schedule: 'Schedule unavailable', unknown: 'No schedule data',
+      outage_unknown: 'Next outage unknown',
+      reason_planned: 'scheduled', reason_emergency: 'emergency', reason_unscheduled: 'unscheduled',
       h: 'h', min: 'min',
     },
     uk: {
@@ -39,6 +41,8 @@
       outage: 'Відключення', restore: 'Світло буде', overdue: 'Мали увімкнути',
       clear: 'Відключень не заплановано', emergency: 'Екстрене відключення', unscheduled: 'Поза графіком',
       no_schedule: 'Графік недоступний', unknown: 'Немає даних графіка',
+      outage_unknown: 'Наступне відключення невідоме',
+      reason_planned: 'за графіком', reason_emergency: 'екстрене', reason_unscheduled: 'поза графіком',
       h: 'г', min: 'хв',
     },
   };
@@ -50,8 +54,11 @@
     unknown: 'rgba(127,127,127,.5)',
   };
 
-  // Which colour and which "sub" line each upcoming event uses.
+  // Which colour, title (`label`, default the kind) and "sub" line each
+  // upcoming event uses.
   const KINDS = {
+    restore_unknown: { color: 'warn', label: 'restore', sub: 'time_unknown' },
+    outage_unknown: { color: 'unknown' },
     outage: { color: 'warn', timed: true },
     restore: { color: 'on', timed: true },
     overdue: { color: 'warn', timed: true, sub: 'late' },
@@ -73,6 +80,11 @@
     power_on: RING + '<path d="M7 12.5l3.2 3.2L17 9"/>',
     power_off: RING + '<path d="M8 8l8 8M16 8l-8 8"/>',
     power_unknown: RING + ASK,
+    power_planned: BOLT + '<path d="M3.5 3.5l17 17"/>',
+    power_emergency: WARN,
+    power_unscheduled: RING + '<path d="M12 7v6"/><circle cx="12" cy="16.6" r=".6" fill="currentColor"/>',
+    restore_unknown: BOLT,
+    outage_unknown: CAL + '<path d="M10.2 14.2a1.9 1.9 0 1 1 2.6 1.7c-.5.2-.8.6-.8 1.1"/><circle cx="12" cy="19.2" r=".4" fill="currentColor"/>',
     outage: BOLT + '<path d="M3.5 3.5l17 17"/>',
     restore: BOLT,
     overdue: RING + '<path d="M12 6.5V12l3.5 2"/>',
@@ -195,6 +207,24 @@
       return null;
     }
 
+    // Makes the halves agree. Off: why it is off (the top half) and when it
+    // comes back (the bottom). On: the next outage. A schedule that says an
+    // outage is on while the power is here gives no next outage.
+    _agree(powerOn, next) {
+      if (!next || powerOn === null) return { reason: null, next };
+      const as = (kind) => ({ ...next, kind, at: null });
+      if (powerOn) {
+        return ['outage', 'clear', 'no_schedule', 'unknown'].includes(next.kind)
+          ? { reason: null, next } : { reason: null, next: as('outage_unknown') };
+      }
+      switch (next.kind) {
+        case 'restore': case 'overdue': return { reason: 'planned', next };
+        case 'emergency': return { reason: 'emergency', next: as('restore_unknown') };
+        case 'unscheduled': case 'clear': case 'outage': return { reason: 'unscheduled', next: as('restore_unknown') };
+        default: return { reason: null, next };
+      }
+    }
+
     // ── render ───────────────────────────────────────────────────────────────
     _render() {
       if (!this.config || !this._hass) return;
@@ -211,11 +241,15 @@
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
       const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : 'off');
       const horiz = c.layout === 'horizontal';
+      // seam_icon: next puts the next state's icon in the centre circle, in place of the arrow.
+      const seamIcon = c.seam_icon === 'next';
+      const { reason, next } = this._agree(powerOn, this._next(powerOn));
       const nowKey = powerOn === null ? 'power_unknown' : powerOn ? 'power_on' : 'power_off';
-      const icon = c.show_now_icon === false ? '' : this._icon(nowKey, nowColor, horiz ? 20 : 28);
+      const icon = c.show_now_icon === false ? '' : this._icon(reason ? `power_${reason}` : nowKey, nowColor, horiz ? 20 : 28);
       const nowTitle = this._t(nowKey);
+      // Why the power is off, as a tag beside the title: scheduled, emergency or unscheduled.
+      const why = reason ? `<span class="why">${esc(this._t(`reason_${reason}`))}</span>` : '';
 
-      const next = this._next(powerOn);
       let nextHtml = '';
       if (next) {
         const k = KINDS[next.kind];
@@ -229,11 +263,11 @@
             : `${pad(next.at.getDate())}.${pad(next.at.getMonth() + 1)} ${hhmm(next.at)}`;
         }
         nextHtml = `
-          <div class="seam" aria-hidden="true">${horiz ? '→' : '↓'}</div>
-          <div class="next${c.show_next_icon === false ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
-            ${c.show_next_icon === false ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24)}
+          <div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : horiz ? '→' : '↓'}</div>
+          <div class="next${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
+            ${c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24)}
             <div class="nx"><span class="lbl">${esc(this._t('next'))}</span>
-              <strong>${esc(this._t(next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
+              <strong>${esc(this._t(k.label || next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
             ${when ? `<div class="when">${esc(when)}</div>` : ''}
           </div>`;
       }
@@ -241,13 +275,30 @@
       const height = Math.max(130, Math.min(400, parseInt(c.height, 10) || 150));
       // The seam runs from just above the "next" text at the left edge to just
       // below the "now" text at the right, in px, so both clear it at any height.
-      const seamL = height - SEAM_BOTTOM, seamR = SEAM_TOP;
+      // Taller cards move it toward 58% / 42% so each half gains room.
+      const seamL = Math.min(height - SEAM_BOTTOM, Math.max(height - SEAM_BOTTOM - 40, Math.round(height * 0.58)));
+      const seamR = Math.max(SEAM_TOP, Math.round(height * 0.42));
+      // valign: where each text block sits in its half. Stacked, "top" and
+      // "bottom" mean the card's edges; the "now" block lives above the seam's
+      // highest point and the "next" block below its lowest.
+      const valign = ['top', 'center', 'bottom'].includes(c.valign) ? c.valign : null;
+      const align = ['left', 'center', 'right'].includes(c.align) ? c.align : 'left';
+      const BLOCK = 46, EDGE = 10, NEAR = 6;
+      const nowRoom = seamR, nextRoom = height - seamL;
+      const padTop = valign === 'center' ? Math.max(EDGE, Math.floor((nowRoom - BLOCK) / 2))
+        : valign === 'bottom' ? Math.max(EDGE, nowRoom - BLOCK - NEAR) : EDGE;
+      const padBottom = valign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
+        : valign === 'top' ? Math.max(EDGE, nextRoom - BLOCK - NEAR) : EDGE;
+      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon ? 'si' : '', c.gradient ? 'g' : '']
+        .filter(Boolean).join(' ');
+      const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
+        : `--seam-l:${seamL}px;--seam-r:${seamR}px;--pt:${padTop}px;--pb:${padBottom}px`;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
-          <div class="split${horiz ? ' h' : ''}${next ? '' : ' solo'}" style="height:${height}px;--tint:${nowColor};${horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%` : `--seam-l:${seamL}px;--seam-r:${seamR}px`}">
+          <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
             <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${icon}<div class="txt">
               <span class="lbl">${esc(this._t('now'))}</span>
-              <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div></div>
+              <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div>${why}</div>
             ${nextHtml}
           </div>
         </ha-card>`;
@@ -274,12 +325,19 @@
       --bg: var(--ha-card-background, var(--card-background-color, #1c1c1e));
       background:linear-gradient(color-mix(in srgb, var(--tint) 20%, transparent), color-mix(in srgb, var(--tint) 20%, transparent)), var(--bg) }
     .now, .next { position:absolute; inset:0; box-sizing:border-box; display:flex; gap:12px; padding:0 14px; cursor:pointer }
-    .now { align-items:flex-start; padding-top:10px }
+    .now { align-items:flex-start; padding-top:var(--pt, 10px) }
     .solo .now { align-items:center; padding-top:0 }
-    .next { align-items:flex-end; padding-bottom:10px; gap:10px;
+    .next { align-items:flex-end; padding-bottom:var(--pb, 10px); gap:10px;
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
+    .g { --gd:to bottom }
+    .g .next { --gd:to top }
+    .g.h { --gd:to right }
+    .g.h .next { --gd:to left }
+    .g, .g .next { background:linear-gradient(var(--gd), color-mix(in srgb, var(--tint) 34%, transparent), color-mix(in srgb, var(--tint) 6%, transparent)), var(--bg) }
     .txt, .nx { min-width:0 }
+    .why { margin-left:auto; flex:none; align-self:flex-start; font-size:11px; line-height:16px; padding:2px 8px; border-radius:999px; white-space:nowrap;
+      background:color-mix(in srgb, var(--tint) 32%, transparent); color:var(--primary-text-color) }
     .nx { flex:1 }
     .ic { flex:none; display:inline-flex; align-items:center; justify-content:center }
     .ic ha-icon { --mdc-icon-size: inherit; display:inline-flex }
@@ -300,14 +358,38 @@
     .h.solo .now { padding-right:14px }
     .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
     .h .txt, .h .nx { display:contents }
+    .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:6px 0 0 }
     .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
     .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
     .h .wi .lbl { grid-column:2 }
     .h strong { grid-column:1 / 3; margin-top:4px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
     .h .sub { grid-column:1 / 3 }
     .h .next .when { grid-column:1 / 3; grid-row:4; align-self:end; justify-self:end; margin:0 }
-    .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - 13px); top:calc(50% - 13px) }
-    .seam { position:absolute; left:calc(50% - 13px); top:calc((var(--seam-l) + var(--seam-r)) / 2 - 13px); width:26px; height:26px; box-sizing:border-box; border-radius:50%;
+    /* align: the text lines inside each half. */
+    .al-center .txt, .al-center .nx, .al-right .txt, .al-right .nx { flex:1 }
+    .al-center .txt, .al-center .nx { text-align:center }
+    .al-right .txt, .al-right .nx { text-align:right }
+    .h.al-center .now, .h.al-center .next { justify-items:center; text-align:center }
+    .h.al-right .now, .h.al-right .next { justify-items:end; text-align:right }
+    /* Not left: the icon gets its own row above the label. */
+    .h:not(.al-left) .ic { grid-column:1 / 3; grid-row:auto; margin-bottom:4px }
+    .h:not(.al-left) .lbl, .h:not(.al-left) .wi .lbl { grid-column:1 / 3; grid-row:auto }
+    .h:not(.al-left) .now, .h:not(.al-left) .next { grid-template-rows:auto auto auto auto 1fr }
+    .h:not(.al-left) .why, .h:not(.al-left) .next .when { grid-row:-2 / -1 }
+    .h.al-center .next .when { justify-self:center }
+    .h.al-center .why { justify-self:center }
+    .h.al-right .why { justify-self:end }
+    /* valign (horizontal): each half's block at the top, middle or bottom. */
+    .h.va-center .now, .h.va-center .next { align-content:center; grid-template-rows:none }
+    .h.va-bottom .now, .h.va-bottom .next { align-content:end; grid-template-rows:none }
+    .h.va-center .next .when, .h.va-bottom .next .when { grid-row:auto; margin-top:4px }
+    .h.va-center .why, .h.va-bottom .why { grid-row:auto }
+    .h.va-center .ic, .h.va-bottom .ic, .h.va-center .lbl, .h.va-bottom .lbl { grid-row:auto }
+    .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - var(--sz) / 2); top:calc(50% - var(--sz) / 2) }
+    .split { --sz:26px }
+    .split.si { --sz:32px }
+    .seam .ic { margin:0 }
+    .seam { position:absolute; left:calc(50% - var(--sz) / 2); top:calc((var(--seam-l) + var(--seam-r)) / 2 - var(--sz) / 2); width:var(--sz); height:var(--sz); box-sizing:border-box; border-radius:50%;
       background:var(--bg); border:1px solid var(--divider-color, rgba(127,127,127,.25)); display:grid; place-items:center; font-size:14px; z-index:2 }
   `;
 
