@@ -24,6 +24,8 @@ build fails when they differ, and a release tag must match both.
 
 1. Add a state to `widget.yaml` for every new behaviour, with a timeline if
    it changes over time. The preview is the spec.
-2. Run `npm run check && npm test && npm run build`, then
+2. Give a card with a tight layout a `render-check.js`, so overlaps fail
+   the render test instead of reaching the page.
+3. Run `npm run check && npm test && npm run build`, then
    `npm run test:render` where Playwright is installed, before a commit.
-3. Mutation-check a new test: break the thing, watch it fail, restore.
+4. Mutation-check a new test: break the thing, watch it fail, restore.

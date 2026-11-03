@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.0.1';
+  const VERSION = '1.0.2';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -209,9 +209,12 @@
       }
 
       const height = Math.max(130, Math.min(400, parseInt(c.height, 10) || 150));
+      // The seam runs from just above the "next" text at the left edge to just
+      // below the "now" text at the right, in px, so both clear it at any height.
+      const seamL = height - SEAM_BOTTOM, seamR = SEAM_TOP;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
-          <div class="split${next ? '' : ' solo'}" style="height:${height}px;--tint:${nowColor}">
+          <div class="split${next ? '' : ' solo'}" style="height:${height}px;--tint:${nowColor};--seam-l:${seamL}px;--seam-r:${seamR}px">
             <div class="now" data-more="${esc(c.entity)}">${icon}<div class="txt">
               <span class="lbl">${esc(this._t('now'))}</span>
               <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div></div>
@@ -226,8 +229,10 @@
   }
 
   // The two halves are tinted with the state colour over the card background.
-  // The seam is one straight line from 60% height at the left edge to 40% at
-  // the right; the arrow sits on its midpoint.
+  // The seam is one straight line, SEAM_BOTTOM px above the bottom at the left
+  // edge and SEAM_TOP px below the top at the right; the arrow sits on its
+  // midpoint. Each text block is 10 px padding + 46 px of text.
+  const SEAM_TOP = 62, SEAM_BOTTOM = 62;
   const CSS = `
     :host { display:block }
     ha-card { overflow:hidden; height:100% }
@@ -235,20 +240,20 @@
       --bg: var(--ha-card-background, var(--card-background-color, #1c1c1e));
       background:linear-gradient(color-mix(in srgb, var(--tint) 20%, transparent), color-mix(in srgb, var(--tint) 20%, transparent)), var(--bg) }
     .now, .next { position:absolute; inset:0; box-sizing:border-box; display:flex; gap:12px; padding:0 14px; cursor:pointer }
-    .now { align-items:flex-start; padding-top:12px }
+    .now { align-items:flex-start; padding-top:10px }
     .solo .now { align-items:center; padding-top:0 }
-    .next { align-items:flex-end; padding-bottom:12px; justify-content:space-between; gap:8px;
-      clip-path:polygon(0 60%,100% 40%,100% 100%,0 100%);
+    .next { align-items:flex-end; padding-bottom:10px; justify-content:space-between; gap:8px;
+      clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
     .txt, .nx { min-width:0 }
     .nx { flex:1 }
     svg { flex:none }
-    .lbl { display:block; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--secondary-text-color) }
-    strong { display:block; font-weight:500; font-size:16px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .next strong { font-size:14px }
-    .sub { display:block; color:var(--secondary-text-color); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .when { font-size:22px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
-    .seam { position:absolute; left:calc(50% - 13px); top:calc(50% - 13px); width:26px; height:26px; box-sizing:border-box; border-radius:50%;
+    .lbl { display:block; font-size:10px; line-height:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--secondary-text-color) }
+    strong { display:block; font-weight:500; font-size:16px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .next strong { font-size:14px; line-height:18px }
+    .sub { display:block; color:var(--secondary-text-color); font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .when { font-size:22px; line-height:26px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
+    .seam { position:absolute; left:calc(50% - 13px); top:calc((var(--seam-l) + var(--seam-r)) / 2 - 13px); width:26px; height:26px; box-sizing:border-box; border-radius:50%;
       background:var(--bg); border:1px solid var(--divider-color, rgba(127,127,127,.25)); display:grid; place-items:center; font-size:14px; z-index:2 }
   `;
 

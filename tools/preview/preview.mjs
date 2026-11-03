@@ -37,7 +37,6 @@ const WIDTHS = [[320, 'Phone'], [W.width, 'Card'], [Math.max(600, W.width + 160)
   .filter(([w], i, a) => a.findIndex(([x]) => x === w) === i);
 // Only the languages the widget declares: the card has no text for any other.
 const langName = (code) => { try { const n = new Intl.DisplayNames([code], { type: 'language' }).of(code); return n.charAt(0).toLocaleUpperCase(code) + n.slice(1); } catch { return code; } };
-const LANGS = [['', 'State default'], ...W.languages.map((c) => [c, langName(c)])];
 
 function layout() {
   if (embed) {
@@ -62,7 +61,8 @@ function layout() {
             <button data-v="dark">Dark</button><button data-v="light">Light</button></div>
           <div class="seg" id="width" role="group" aria-label="Width">
             ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${l} <small>${w}</small></button>`).join('')}</div>
-          <label class="sel">Language <select id="lang">${LANGS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+          ${W.languages.length > 1 ? `<div class="seg" id="lang" role="group" aria-label="Language">
+            ${W.languages.map((c) => `<button data-v="${esc(c)}" lang="${esc(c)}">${esc(langName(c))}</button>`).join('')}</div>` : ''}
         </div>
         <p class="desc" id="desc"></p>
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
@@ -119,19 +119,30 @@ async function selectState(st) {
       ? `<button data-at="0"><b>${hhmm(t0)}</b>Start</button>` + st.timeline.map((e) => `<button data-at="${e.off}"><b>${hhmm(t0 + e.off)}</b>${esc(e.note || e.at)}</button>`).join('')
       : '<span class="muted">No timeline in this state: move the clock to watch countdowns tick.</span>';
   }
-  update();
+  update(true);
 }
 
-function update() {
+// Redraws what changed. While the clock plays this runs ~20 times a second,
+// so each part is skipped unless its input moved: the card only sees a new
+// hass when the preview minute or an entity changes, the theme and width are
+// set only when picked, and the URL is written once playing stops.
+const last = {};
+function update(force = false) {
   const t = t0 + ui.off;
+  const minute = Math.floor(t / 6e4);
   clock.set(t);
-  const states = statesAt(ui.state, t0, t);
   const th = theme();
-  applyTheme($('stage'), th);
-  $('frame').style.width = `${ui.width}px`;
-  if (card) {
-    try { card.hass = makeHass({ states, language: lang(), theme: th, onService: (s, d) => log(`service ${s} ${JSON.stringify(d || {})}`) }); }
-    catch (e) { $('frame').innerHTML = `<div class="err">${esc(e.message)}</div>`; card = null; }
+  if (force || last.theme !== th) { applyTheme($('stage'), th); last.theme = th; }
+  if (force || last.width !== ui.width) { $('frame').style.width = `${ui.width}px`; last.width = ui.width; }
+  const key = `${ui.state.id}|${minute}|${lang()}|${th}`;
+  let states = last.states;
+  if (force || last.key !== key) {
+    last.key = key;
+    states = last.states = statesAt(ui.state, t0, t);
+    if (card) {
+      try { card.hass = makeHass({ states, language: lang(), theme: th, onService: (s, d) => log(`service ${s} ${JSON.stringify(d || {})}`) }); }
+      catch (e) { $('frame').innerHTML = `<div class="err">${esc(e.message)}</div>`; card = null; }
+    }
   }
   if (embed) return;
   $('now').textContent = hhmm(t);
@@ -139,29 +150,41 @@ function update() {
   $('slider').value = ui.off;
   $('play').textContent = ui.playing ? '❚❚' : '▶';
   $('play').setAttribute('aria-label', ui.playing ? 'Pause' : 'Play');
-  document.querySelectorAll('#theme button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === th));
-  document.querySelectorAll('#width button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.v === ui.width));
-  $('lang').value = ui.lang || '';
+  if (force || last.controls !== `${th}|${ui.width}|${lang()}`) {
+    last.controls = `${th}|${ui.width}|${lang()}`;
+    document.querySelectorAll('#theme button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === th));
+    document.querySelectorAll('#width button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.v === ui.width));
+    document.querySelectorAll('#lang button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === lang()));
+  }
   document.querySelectorAll('#events [data-at]').forEach((b) => b.classList.toggle('past', +b.dataset.at <= ui.off));
-  $('ents').innerHTML = Object.values(states).map((s) =>
-    `<tr><td>${esc(s.entity_id)}</td><td><b>${esc(s.state)}</b></td><td class="muted">${esc(ago(t - Date.parse(s.last_changed)))}</td></tr>`).join('');
+  if (force || last.entsMinute !== minute) {
+    last.entsMinute = minute;
+    $('ents').innerHTML = Object.values(states).map((s) =>
+      `<tr><td>${esc(s.entity_id)}</td><td><b>${esc(s.state)}</b></td><td class="muted">${esc(ago(t - Date.parse(s.last_changed)))}</td></tr>`).join('');
+  }
+  if (!ui.playing) writeUrl();
+}
+
+function writeUrl() {
   const p = new URLSearchParams();
   p.set('state', ui.state.id);
   if (ui.off) p.set('t', Math.round(ui.off / 6e4));
   if (ui.theme) p.set('theme', ui.theme);
   if (ui.width !== W.width) p.set('w', ui.width);
   if (ui.lang) p.set('lang', ui.lang);
-  history.replaceState(null, '', `?${p}`);
+  const url = `?${p}`;
+  if (url !== location.search) history.replaceState(null, '', url);
 }
 
+let lastDraw = 0;
 function frameLoop(now) {
   if (!ui.playing) return;
   const dt = lastTick ? now - lastTick : 0;
   lastTick = now;
   ui.off += dt * ui.speed * 60;   // `speed` preview minutes per real second
   if (ui.off >= ui.state.span) { ui.off = ui.state.span; ui.playing = false; }
-  update();
-  raf = requestAnimationFrame(frameLoop);
+  if (!ui.playing || now - lastDraw >= 50) { lastDraw = now; update(); }
+  if (ui.playing) raf = requestAnimationFrame(frameLoop);
 }
 
 function bind() {
@@ -172,7 +195,7 @@ function bind() {
   });
   $('theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.theme = b.dataset.v === ui.state.theme ? null : b.dataset.v; update(); } });
   $('width').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.width = +b.dataset.v; update(); } });
-  $('lang').addEventListener('change', (e) => { ui.lang = e.target.value || null; update(); });
+  $('lang')?.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.lang = b.dataset.v === ui.state.language ? null : b.dataset.v; update(); } });
   $('slider').addEventListener('input', (e) => { ui.off = +e.target.value; update(); });
   $('speed').addEventListener('change', (e) => { ui.speed = +e.target.value; });
   $('reset').addEventListener('click', () => { ui.off = 0; ui.playing = false; update(); });

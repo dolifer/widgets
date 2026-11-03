@@ -27,36 +27,46 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
 let failed = 0, checked = 0;
 
+const { offsetOf } = await import('../tools/preview/scenario.mjs');
+const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+let errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+
 for (const w of widgets) {
+  // Optional per-widget layout check: widgets/<id>/render-check.js, a function of the card.
+  const checkFile = path.join(w.dir, 'render-check.js');
+  const check = fs.existsSync(checkFile) ? fs.readFileSync(checkFile, 'utf8').replace(/^\s*\/\/.*$/gm, '').trim() : null;
+  const langs = w.preview?.languages || ['en'];
+  const widths = [...new Set([320, w.preview?.width || 420])];
   for (const st of w.states) {
-    const times = [0, ...(st.timeline || []).map((e) => e.at)];
-    for (const at of times) {
-      const mins = at === 0 ? 0 : Math.round(((await import('../tools/preview/scenario.mjs')).offsetOf(at)) / 6e4);
-      for (const theme of ['dark', 'light']) {
-        const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
-        const errors = [];
-        page.on('pageerror', (e) => errors.push(e.message));
-        page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-        await page.goto(`${base}/${w.id}/?state=${st.id}&t=${mins}&theme=${theme}`);
+    const times = [0, ...(st.timeline || []).map((e) => Math.round(offsetOf(e.at) / 6e4))];
+    for (const mins of times) {
+      const runs = [];
+      for (const width of widths) for (const lang of langs) runs.push({ width, lang, theme: 'dark' });
+      runs.push({ width: widths[widths.length - 1], lang: langs[0], theme: 'light' });
+      for (const { width, lang, theme } of runs) {
+        errors = [];
+        await page.goto(`${base}/${w.id}/?state=${st.id}&t=${mins}&theme=${theme}&w=${width}&lang=${lang}`);
         await page.waitForFunction((tag) => document.querySelector(tag)?.shadowRoot?.innerHTML.length > 0 || document.querySelector('.err'), w.tag, { timeout: 5000 }).catch(() => {});
-        const r = await page.evaluate((tag) => ({
-          err: document.querySelector('.err')?.textContent,
-          html: document.querySelector(tag)?.shadowRoot?.innerHTML.length || 0,
-          text: (document.querySelector(tag)?.shadowRoot?.querySelector('ha-card') || document.querySelector(tag)?.shadowRoot)?.textContent.replace(/\s+/g, ' ').trim().slice(0, 90),
-        }), w.tag);
+        const r = await page.evaluate(([tag, src]) => {
+          const card = document.querySelector(tag);
+          return {
+            err: document.querySelector('.err')?.textContent,
+            html: card?.shadowRoot?.innerHTML.length || 0,
+            text: (card?.shadowRoot?.querySelector('ha-card') || card?.shadowRoot)?.textContent.replace(/\s+/g, ' ').trim().slice(0, 90),
+            layout: card && src ? (0, eval)(src)(card) : [],
+          };
+        }, [w.tag, check]);
         checked++;
-        const label = `${w.id} · ${st.id} · +${mins} min · ${theme}`;
-        if (errors.length || r.err || !r.html) {
-          failed++;
-          console.log(`✗ ${label}: ${r.err || errors.join('; ') || 'card rendered nothing'}`);
-        } else if (theme === 'dark') {
-          console.log(`✓ ${label}: ${r.text}`);
-        }
+        const label = `${w.id} · ${st.id} · +${mins} min · ${width}px ${lang} ${theme}`;
+        const bad = [r.err, ...errors, ...(r.html ? [] : ['card rendered nothing']), ...r.layout].filter(Boolean);
+        if (bad.length) { failed++; console.log(`✗ ${label}: ${bad.join('; ')}`); }
+        else if (process.argv.includes('-v')) console.log(`✓ ${label}: ${r.text}`);
         if (shotsAt && theme === 'dark') {
           fs.mkdirSync(shotsAt, { recursive: true });
-          await page.locator('#frame').screenshot({ path: path.join(shotsAt, `${w.id}--${st.id}--${mins}.png`) });
+          await page.locator('#frame').screenshot({ path: path.join(shotsAt, `${w.id}--${st.id}--${mins}--${width}-${lang}.png`) });
         }
-        await page.close();
       }
     }
   }

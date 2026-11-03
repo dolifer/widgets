@@ -14,6 +14,7 @@ widgets/<id>/
   <id>.js          the card: one file, no build step
   widget.yaml      name, version, and the states the preview plays
   README.md        install and options, shipped in the release zip
+  render-check.js  optional: layout rules the render test checks (see below)
 schema/widget.schema.yaml   what widget.yaml may hold
 tools/build.mjs             validate + generate dist/ (the Pages site)
 tools/release.mjs           pack one widget for a release
@@ -55,7 +56,16 @@ states:
 ```
 
 `preview.clock: "18:20"` starts every run at the same wall time, so the
-pages look the same each day. The schema has the rest.
+pages look the same each day. `preview.languages` lists the languages the
+card speaks; the preview offers only those. The schema has the rest.
+
+## Layout checks
+
+`npm run test:render` opens every state, at the start and at each timeline
+event, at phone width (320 px) and the widget's own width, in every declared
+language. If `widgets/<id>/render-check.js` exists, it runs after each render:
+a function of the card element that returns problems as strings (text
+crossing a seam, text cut off, …). Any problem fails the run.
 
 ## Releases
 
