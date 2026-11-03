@@ -56,7 +56,14 @@
   if (when) for (const e of items('.next .nx > *, .next .ic')) if (hit(ink(e), ink(when))) out.push(`${name(e)} overlaps the time`);
   // The reason tag sits clear of the title and the duration.
   const why = root.querySelector('.now .why');
-  if (why) for (const t of items('.now .lbl, .now strong, .now .sub')) if (hit(why.getBoundingClientRect(), ink(t))) out.push(`reason tag overlaps ${name(t)}`);
+  if (why && !why.closest('.lbl')) for (const t of items('.now .lbl, .now strong, .now .sub')) if (hit(why.getBoundingClientRect(), ink(t))) out.push(`reason tag overlaps ${name(t)}`);
+  // Centred or right-aligned, the reason tag lines up with the text: it sits
+  // within the title's left and right edges, not out in the corner.
+  const title = root.querySelector('.now strong');
+  if (why && title && !split.classList.contains('al-left')) {
+    const w = why.getBoundingClientRect(), t = ink(title);
+    if (w.left < t.left - 1 && w.right > t.right + 1 ? false : w.right > t.right + 40 || w.left < t.left - 40) out.push('reason tag is not aligned with the text');
+  }
   // Each icon sits beside its text, not on it.
   for (const half of ['.now', '.next']) {
     const a = root.querySelector(`${half} .ic`);

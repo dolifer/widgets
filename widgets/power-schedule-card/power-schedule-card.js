@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.2.1';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -289,6 +289,9 @@
         : valign === 'bottom' ? Math.max(EDGE, nowRoom - BLOCK - NEAR) : EDGE;
       const padBottom = valign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
         : valign === 'top' ? Math.max(EDGE, nextRoom - BLOCK - NEAR) : EDGE;
+      // Stacked and centred or right-aligned, the reason tag rides on the
+      // label line so it lines up with the text instead of the far corner.
+      const whyInLbl = !horiz && align !== 'left';
       const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon ? 'si' : '', c.gradient ? 'g' : '']
         .filter(Boolean).join(' ');
       const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
@@ -297,8 +300,8 @@
         <ha-card>
           <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
             <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${icon}<div class="txt">
-              <span class="lbl">${esc(this._t('now'))}</span>
-              <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div>${why}</div>
+              <span class="lbl">${esc(this._t('now'))}${whyInLbl ? why : ''}</span>
+              <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div>${whyInLbl ? '' : why}</div>
             ${nextHtml}
           </div>
         </ha-card>`;
@@ -358,6 +361,8 @@
     .h.solo .now { padding-right:14px }
     .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
     .h .txt, .h .nx { display:contents }
+    .lbl .why { display:inline-block; vertical-align:top; margin-left:6px; font-size:10px; line-height:12px; padding:1px 6px;
+      text-transform:none; letter-spacing:0 }
     .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:6px 0 0 }
     .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
     .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
