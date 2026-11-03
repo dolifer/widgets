@@ -56,13 +56,31 @@
   if (when) for (const e of items('.next .nx > *, .next .ic')) if (hit(ink(e), ink(when))) out.push(`${name(e)} overlaps the time`);
   // The reason tag sits clear of the title and the duration.
   const why = root.querySelector('.now .why');
-  if (why && !why.closest('.lbl')) for (const t of items('.now .lbl, .now strong, .now .sub')) if (hit(why.getBoundingClientRect(), ink(t))) out.push(`reason tag overlaps ${name(t)}`);
-  // Centred or right-aligned, the reason tag lines up with the text: it sits
-  // within the title's left and right edges, not out in the corner.
+  if (why) for (const t of items('.now .lbl, .now strong, .now .sub')) if (hit(why.getBoundingClientRect(), ink(t))) out.push(`reason tag overlaps ${name(t)}`);
+  // Stacked, the reason tag sits on the title row, right after the title.
+  // Side by side and not left-aligned, it lines up with the text.
   const title = root.querySelector('.now strong');
-  if (why && title && !split.classList.contains('al-left')) {
+  if (why && title) {
     const w = why.getBoundingClientRect(), t = ink(title);
-    if (w.left < t.left - 1 && w.right > t.right + 1 ? false : w.right > t.right + 40 || w.left < t.left - 40) out.push('reason tag is not aligned with the text');
+    if (!horiz) {
+      if (Math.abs((w.top + w.bottom) / 2 - (t.top + t.bottom) / 2) > 3) out.push('reason tag is not on the title row');
+      if (w.left - t.right > 12 || w.left < t.right - 1) out.push('reason tag is not next to the title');
+    } else if (!split.classList.contains('al-left') && (w.right > t.right + 40 || w.left < t.left - 40)) {
+      out.push('reason tag is not aligned with the text');
+    }
+  }
+  // Stacked and centred, each text block is centred on the whole card, unless
+  // it is too wide to clear the icon and the time on equal sides.
+  if (!horiz && split.classList.contains('al-center')) {
+    for (const half of ['.now', '.next']) {
+      const box = root.querySelector(`${half} .txt, ${half} .nx`);
+      if (!box) continue;
+      const b = box.getBoundingClientRect();
+      const side = Math.max(0, ...[...root.querySelectorAll(`${half} .ic, ${half} .when`)].map((e) => e.getBoundingClientRect().width));
+      const fits = b.width + 2 * (side + 12) + 28 <= R.width - 1;
+      const off = (b.left + b.right) / 2 - (R.left + R.right) / 2;
+      if (fits && Math.abs(off) > 2) out.push(`${half} text is ${Math.round(off)} px off the card's centre`);
+    }
   }
   // Each icon sits beside its text, not on it.
   for (const half of ['.now', '.next']) {

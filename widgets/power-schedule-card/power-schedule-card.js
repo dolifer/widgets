@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.1';
+  const VERSION = '1.2.2';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -289,9 +289,10 @@
         : valign === 'bottom' ? Math.max(EDGE, nowRoom - BLOCK - NEAR) : EDGE;
       const padBottom = valign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
         : valign === 'top' ? Math.max(EDGE, nextRoom - BLOCK - NEAR) : EDGE;
-      // Stacked and centred or right-aligned, the reason tag rides on the
-      // label line so it lines up with the text instead of the far corner.
-      const whyInLbl = !horiz && align !== 'left';
+      // Stacked, the reason tag sits on the title row, right after the title.
+      // Side by side the halves are narrow, so it gets a row of its own.
+      const title = `<strong>${esc(nowTitle)}</strong>`;
+      const titleRow = horiz ? title : `<div class="ttl">${title}${why}</div>`;
       const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon ? 'si' : '', c.gradient ? 'g' : '']
         .filter(Boolean).join(' ');
       const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
@@ -300,8 +301,8 @@
         <ha-card>
           <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
             <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${icon}<div class="txt">
-              <span class="lbl">${esc(this._t('now'))}${whyInLbl ? why : ''}</span>
-              <strong>${esc(nowTitle)}</strong><span class="sub">${esc(sinceTxt)}</span></div>${whyInLbl ? '' : why}</div>
+              <span class="lbl">${esc(this._t('now'))}</span>
+              ${titleRow}<span class="sub">${esc(sinceTxt)}</span></div>${horiz ? why : ''}</div>
             ${nextHtml}
           </div>
         </ha-card>`;
@@ -361,8 +362,12 @@
     .h.solo .now { padding-right:14px }
     .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
     .h .txt, .h .nx { display:contents }
-    .lbl .why { display:inline-block; vertical-align:top; margin-left:6px; font-size:10px; line-height:12px; padding:1px 6px;
-      text-transform:none; letter-spacing:0 }
+    .split:not(.h) .when { font-size:26px; line-height:30px }
+    .ttl { display:flex; align-items:center; gap:8px; min-width:0 }
+    .ttl strong { min-width:0 }
+    .ttl .why { margin:0; align-self:center; line-height:14px }
+    .al-center .ttl { justify-content:center }
+    .al-right .ttl { justify-content:flex-end }
     .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:6px 0 0 }
     .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
     .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
@@ -373,6 +378,12 @@
     /* align: the text lines inside each half. */
     .al-center .txt, .al-center .nx, .al-right .txt, .al-right .nx { flex:1 }
     .al-center .txt, .al-center .nx { text-align:center }
+    /* Stacked and centred: three columns with equal sides, so the text is
+       centred on the whole card width, with the icon left and the time right. */
+    .split:not(.h).al-center .now, .split:not(.h).al-center .next { display:grid; grid-template-columns:1fr minmax(0,max-content) 1fr; column-gap:12px }
+    .split:not(.h).al-center .ic { grid-column:1; grid-row:1; justify-self:start }
+    .split:not(.h).al-center .txt, .split:not(.h).al-center .nx { grid-column:2; grid-row:1 }
+    .split:not(.h).al-center .when { grid-column:3; grid-row:1; justify-self:end; margin:0 }
     .al-right .txt, .al-right .nx { text-align:right }
     .h.al-center .now, .h.al-center .next { justify-items:center; text-align:center }
     .h.al-right .now, .h.al-right .next { justify-items:end; text-align:right }
