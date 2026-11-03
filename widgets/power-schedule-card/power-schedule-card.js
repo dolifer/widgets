@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.2';
+  const VERSION = '1.2.3';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@
       clear: 'No outages planned', emergency: 'Emergency outage', unscheduled: 'Unscheduled outage',
       no_schedule: 'Schedule unavailable', unknown: 'No schedule data',
       outage_unknown: 'Next outage unknown',
-      reason_planned: 'scheduled', reason_emergency: 'emergency', reason_unscheduled: 'unscheduled',
+      reason_planned: 'scheduled', reason_emergency: 'emergency', reason_unscheduled: 'unscheduled', reason_unknown: 'reason unknown',
       h: 'h', min: 'min',
     },
     uk: {
@@ -42,7 +42,7 @@
       clear: 'Відключень не заплановано', emergency: 'Екстрене відключення', unscheduled: 'Поза графіком',
       no_schedule: 'Графік недоступний', unknown: 'Немає даних графіка',
       outage_unknown: 'Наступне відключення невідоме',
-      reason_planned: 'за графіком', reason_emergency: 'екстрене', reason_unscheduled: 'поза графіком',
+      reason_planned: 'за графіком', reason_emergency: 'екстрене', reason_unscheduled: 'поза графіком', reason_unknown: 'причина невідома',
       h: 'г', min: 'хв',
     },
   };
@@ -221,7 +221,8 @@
         case 'restore': case 'overdue': return { reason: 'planned', next };
         case 'emergency': return { reason: 'emergency', next: as('restore_unknown') };
         case 'unscheduled': case 'clear': case 'outage': return { reason: 'unscheduled', next: as('restore_unknown') };
-        default: return { reason: null, next };
+        // No schedule, or it is down: off for a reason we cannot tell.
+        default: return { reason: 'unknown', next };
       }
     }
 
@@ -245,7 +246,7 @@
       const seamIcon = c.seam_icon === 'next';
       const { reason, next } = this._agree(powerOn, this._next(powerOn));
       const nowKey = powerOn === null ? 'power_unknown' : powerOn ? 'power_on' : 'power_off';
-      const icon = c.show_now_icon === false ? '' : this._icon(reason ? `power_${reason}` : nowKey, nowColor, horiz ? 20 : 28);
+      const icon = c.show_now_icon === false ? '' : this._icon(reason && reason !== 'unknown' ? `power_${reason}` : nowKey, nowColor, horiz ? 20 : 28);
       const nowTitle = this._t(nowKey);
       // Why the power is off, as a tag beside the title: scheduled, emergency or unscheduled.
       const why = reason ? `<span class="why">${esc(this._t(`reason_${reason}`))}</span>` : '';
@@ -340,8 +341,7 @@
     .g.h .next { --gd:to left }
     .g, .g .next { background:linear-gradient(var(--gd), color-mix(in srgb, var(--tint) 34%, transparent), color-mix(in srgb, var(--tint) 6%, transparent)), var(--bg) }
     .txt, .nx { min-width:0 }
-    .why { margin-left:auto; flex:none; align-self:flex-start; font-size:11px; line-height:16px; padding:2px 8px; border-radius:999px; white-space:nowrap;
-      background:color-mix(in srgb, var(--tint) 32%, transparent); color:var(--primary-text-color) }
+    .why { margin-left:auto; flex:none; align-self:flex-start; font-size:13px; line-height:20px; white-space:nowrap; color:var(--secondary-text-color) }
     .nx { flex:1 }
     .ic { flex:none; display:inline-flex; align-items:center; justify-content:center }
     .ic ha-icon { --mdc-icon-size: inherit; display:inline-flex }
@@ -363,12 +363,12 @@
     .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
     .h .txt, .h .nx { display:contents }
     .split:not(.h) .when { font-size:26px; line-height:30px }
-    .ttl { display:flex; align-items:center; gap:8px; min-width:0 }
+    .ttl { display:flex; align-items:baseline; gap:8px; min-width:0; height:20px }
     .ttl strong { min-width:0 }
-    .ttl .why { margin:0; align-self:center; line-height:14px }
+    .ttl .why { margin:0; align-self:baseline; line-height:16px }
     .al-center .ttl { justify-content:center }
     .al-right .ttl { justify-content:flex-end }
-    .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:6px 0 0 }
+    .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:2px 0 0 }
     .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
     .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
     .h .wi .lbl { grid-column:2 }

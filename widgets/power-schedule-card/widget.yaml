@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.2.2
+version: 1.2.3
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -110,6 +110,15 @@ states:
       sensor.next_outage: unavailable
       sensor.next_restore: unavailable
     expect: [Світло є, Графік недоступний]
+
+  - id: off-schedule-down
+    title: No power, schedule unavailable
+    description: Off while the schedule integration is down, so the reason is unknown.
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-25m }
+      sensor.next_outage: unavailable
+      sensor.next_restore: unavailable
+    expect: [Немає світла, причина невідома, Графік недоступний]
 
   - id: grid-unknown
     title: Power sensor unavailable

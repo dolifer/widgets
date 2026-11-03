@@ -36,7 +36,7 @@ When you replace the file with a newer version, bump `?v=1` to `?v=2`, or browse
 
 The two halves always agree with the power sensor, even when the schedule is out of step:
 
-- **Power off:** the top shows why, as a small tag and its icon: *scheduled* (the schedule has a restore time), *emergency*, or *unscheduled* (nothing in the schedule explains it). The bottom shows when it comes back, or "time unknown".
+- **Power off:** the top shows why, next to the title, with its icon: *scheduled* (the schedule has a restore time), *emergency*, *unscheduled* (nothing in the schedule explains it), or *reason unknown* (no schedule, or it is down). The bottom shows when it comes back, or "time unknown".
 - **Power on:** the bottom shows the next outage, "no outages planned", or "next outage unknown" when the schedule still talks about a restore.
 
 ## Examples
@@ -101,7 +101,7 @@ template:
 | `seam_icon` | `arrow` | `next` shows the next state's icon in the centre circle instead of the arrow (the bottom half then has no icon of its own) |
 | `gradient` | `false` | `true` fades each half's colour from its outer edge toward the seam instead of a flat tint |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
-| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
+| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
 | `colors` | — | `on`, `off`, `warn`, `unknown`: any CSS colour |
 | `show_now_icon` | `true` | Icon in the top half (power now) |
 | `show_next_icon` | `true` | Icon in the bottom half (what comes next) |
