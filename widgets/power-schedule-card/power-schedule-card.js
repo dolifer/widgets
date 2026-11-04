@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.6.0';
+  const VERSION = '1.7.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -264,10 +264,10 @@
       const powerOn = this._powerOn();
       const since = this._state(c.entity)?.last_changed;
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
-      // outage_color: red or orange paints every outage the same, now and next
-      // (unset: no power is red, the coming outage is orange).
-      const outKey = { red: 'off', orange: 'warn' }[c.outage_color];
-      const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : outKey || 'off');
+      // outage_color: every outage in one colour, no power now and the coming
+      // one alike: red (the `off` colour, default) or orange (`warn`).
+      const outKey = c.outage_color === 'orange' ? 'warn' : 'off';
+      const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : outKey);
       const horiz = c.layout === 'horizontal';
       // align and valign place the "now" block; the "next" block mirrors it
       // (left ↔ right, top ↔ bottom) so the two balance across the card.
@@ -290,7 +290,7 @@
       let nextHtml = '', nextTint = nowColor;
       if (next) {
         const k = KINDS[next.kind];
-        const nextColor = this._color(next.kind === 'outage' && outKey ? outKey : k.color);
+        const nextColor = this._color(next.kind === 'outage' ? outKey : k.color);
         nextTint = nextColor;
         let sub = k.sub ? this._t(k.sub) : '';
         // time_style: big (the time on its own, a date in front on another

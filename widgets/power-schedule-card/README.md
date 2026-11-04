@@ -105,7 +105,7 @@ template:
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
 | `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `at`, `tomorrow`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
 | `colors` | — | `on`, `off`, `warn`, `unknown`: any CSS colour |
-| `outage_color` | `mixed` | `red` or `orange`: paint every outage in one colour, both "no power" now and the coming outage. `mixed`: no power is red, the coming outage orange |
+| `outage_color` | `red` | `red` or `orange`: the colour of every outage, both "no power" now and the coming outage |
 | `show_now_icon` | `true` | Icon in the top half (power now) |
 | `show_next_icon` | `true` | Icon in the bottom half (what comes next) |
 | `icons` | — | Replace any icon with an `mdi:` one. Keys: `power_on`, `power_off`, `power_unknown`, `power_planned`, `power_emergency`, `power_unscheduled` (top); `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `restore_unknown`, `outage_unknown` (bottom) |

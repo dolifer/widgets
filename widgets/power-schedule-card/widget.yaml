@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.6.0
+version: 1.7.0
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -10,22 +10,18 @@ preview:
   language: uk
   languages: [uk, en]
   clock: "18:20"
+  # Chips in sections; `label` names the chip row inside its section.
   options:
-    - { key: layout, label: Layout, default: stacked, values: [{ value: stacked, label: Top/bottom }, { value: horizontal, label: Side by side }] }
-    - { key: align, label: Align, default: left, values: [left, center, right] }
-    - { key: valign, label: Vertical, default: top, values: [top, center, bottom] }
-    - label: Icons
-      defaults: { show_now_icon: true, show_next_icon: true }
-      values:
-        - { label: Both, set: { show_now_icon: true, show_next_icon: true } }
-        - { label: Now, set: { show_now_icon: true, show_next_icon: false } }
-        - { label: Next, set: { show_now_icon: false, show_next_icon: true } }
-        - { label: None, set: { show_now_icon: false, show_next_icon: false } }
-    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next }, { value: now, label: Now }, { value: none, label: None }] }
-    - { key: time_style, label: Time, default: big, values: [{ value: big, label: Big }, { value: day, label: Day }, { value: inline, label: Inline }] }
-    - { key: outage_color, label: Outage, default: mixed, values: [{ value: mixed, label: Mixed }, { value: red, label: Red }, { value: orange, label: Orange }] }
-    - { key: split, label: Split, default: rise, values: [{ value: rise, label: ╱ Rise }, { value: fall, label: ╲ Fall }, { value: straight, label: ― Straight }] }
-    - { key: gradient, label: Gradient, default: false, values: [{ value: false, label: Off }, { value: blend, label: Blend }, { value: soft, label: Soft }, { value: corners, label: Corners }] }
+    - { section: Layout, key: layout, label: Stack, default: stacked, values: [{ value: stacked, label: Vertical, icon: stack-vertical }, { value: horizontal, label: Horizontal, icon: stack-horizontal }] }
+    - { section: Layout, key: valign, label: Top/bottom, default: top, values: [{ value: top, label: Top, icon: valign-top }, { value: center, label: Center, icon: valign-center }, { value: bottom, label: Bottom, icon: valign-bottom }] }
+    - { section: Layout, key: align, label: Left/right, default: left, values: [{ value: left, label: Left, icon: align-left }, { value: center, label: Center, icon: align-center }, { value: right, label: Right, icon: align-right }] }
+    - { section: Icons, key: show_now_icon, label: Now, default: true, values: [{ value: true, label: Show, icon: show }, { value: false, label: Hide, icon: hide }] }
+    - { section: Icons, key: show_next_icon, label: Next, default: true, values: [{ value: true, label: Show, icon: show }, { value: false, label: Hide, icon: hide }] }
+    - { section: Icons, key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next }, { value: now, label: Now }, { value: none, label: None }] }
+    - { section: Edge, key: split, label: Line, default: rise, values: [{ value: rise, label: Rise, icon: line-rise }, { value: fall, label: Fall, icon: line-fall }, { value: straight, label: Straight, icon: line-straight }] }
+    - { section: Edge, key: gradient, label: Gradient, default: false, values: [{ value: false, label: Off }, { value: blend, label: Blend }, { value: soft, label: Soft }, { value: corners, label: Corners }] }
+    - { section: Outage, key: outage_color, label: Colour, default: red, values: [{ value: red, label: Red }, { value: orange, label: Orange }] }
+    - { section: Time, key: time_style, label: Style, default: big, values: [{ value: big, label: Big }, { value: day, label: Day }, { value: inline, label: Inline }] }
 # The render test runs every state with each option value above on its own,
 # with every combination of the `matrix` keys, and with each extra config.
 test:

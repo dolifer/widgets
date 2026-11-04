@@ -4,17 +4,26 @@ uk:
   Power schedule: Графік світла
   "Whether the power is on now and why it is off, and what the outage schedule says comes next: an outage or the power coming back, with a countdown.": "Чи є світло зараз і чому його немає, і що далі за графіком: відключення чи повернення світла, з відліком часу."
   Layout: Розкладка
+  Stack: Половини
+  Horizontal: Горизонтально
+  Left/right: Ліворуч/праворуч
+  Show: Показати
+  Hide: Сховати
+  Edge: Межа
+  Line: Лінія
+  Rise: Вгору
+  Fall: Вниз
+  Straight: Пряма
+  Colour: Колір
+  Style: Вигляд
   Top/bottom: Згори/знизу
-  Side by side: Поруч
-  Align: Вирівнювання
   Left: Ліворуч
   Center: Центр
   Right: Праворуч
-  Vertical: По вертикалі
+  Vertical: Вертикально
   Top: Вгорі
   Bottom: Внизу
   Icons: Іконки
-  Both: Обидві
   Now: Зараз
   Next: Далі
   None: Без
@@ -25,13 +34,8 @@ uk:
   Day: День
   Inline: У рядку
   Outage: Відключення
-  Mixed: Змішано
   Red: Червоне
   Orange: Помаранчеве
-  Split: Лінія
-  ╱ Rise: ╱ Вгору
-  ╲ Fall: ╲ Вниз
-  ― Straight: ― Пряма
   Gradient: Градієнт
   "Off": Вимк
   Blend: Перехід

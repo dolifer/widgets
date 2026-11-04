@@ -84,6 +84,7 @@ properties:
           properties:
             key: { type: string, pattern: "^[a-z_][a-z0-9_]*$", description: "Config key, for plain values" }
             label: { type: string, description: "Group name; default: the key" }
+            section: { type: string, description: "Heading the chips sit under; options with the same section show together" }
             default: { type: [string, number, boolean], description: "What the card uses when the key is not set" }
             defaults: { type: object, description: "What the card uses for each key a chip sets, when it is not set" }
             values:
@@ -98,12 +99,14 @@ properties:
                     properties:
                       value: { type: [string, number, boolean] }
                       label: { type: string }
+                      icon: { type: string, description: "A chip icon from tools/preview/icons.mjs; the label becomes its tooltip" }
                   - type: object
                     additionalProperties: false
                     required: [set]
                     properties:
                       set: { type: object, minProperties: 1, description: "Config keys this chip sets" }
                       label: { type: string }
+                      icon: { type: string }
   test:
     description: >
       Extra looks for the render test. Every state is rendered with each

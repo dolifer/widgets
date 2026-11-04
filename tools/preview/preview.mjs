@@ -7,6 +7,7 @@
 import { clock, applyTheme, makeHass, loadCard } from './hass.mjs';
 import { statesAt, startTime } from './scenario.mjs';
 import { translator, remembered } from './i18n.mjs';
+import { icon } from './icons.mjs';
 
 clock.install();
 
@@ -69,6 +70,13 @@ const WIDTHS = [[320, 'Phone'], [W.width, 'Card'], [Math.max(600, W.width + 160)
 const langName = (code) => { try { const n = new Intl.DisplayNames([code], { type: 'language' }).of(code); return n.charAt(0).toLocaleUpperCase(code) + n.slice(1); } catch { return code; } };
 const langShort = (code) => langName(code).slice(0, 3);
 
+// Options grouped by section, in the order each section first appears.
+function sections() {
+  const out = new Map();
+  OPTS.forEach((o, i) => { if (!out.has(o.section)) out.set(o.section, []); out.get(o.section).push([o, i]); });
+  return [...out];
+}
+
 function layout() {
   if (embed) {
     document.body.classList.add('embed');
@@ -91,9 +99,12 @@ function layout() {
           <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
             ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
         </div>
-        ${OPTS.length ? `<div class="bar opts" id="opts">
-          ${OPTS.map((o, i) => `<div class="grp"><span>${esc(t(o.label))}</span><div class="seg" role="group" aria-label="${esc(t(o.label))}" data-opt="${i}">
-            ${o.values.map((v, j) => `<button data-i="${j}">${esc(t(v.label))}</button>`).join('')}</div></div>`).join('')}
+        ${OPTS.length ? `<div class="opts" id="opts">
+          ${sections().map(([name, list]) => `<div class="sec">${name ? `<h4>${esc(t(name))}</h4>` : ''}<div class="bar">
+            ${list.map(([o, i]) => `<div class="grp"><span>${esc(t(o.label))}</span><div class="seg" role="group" aria-label="${esc(t(o.label))}" data-opt="${i}">
+              ${o.values.map((v, j) => (v.icon
+                ? `<button data-i="${j}" class="ic" title="${esc(t(v.label))}" aria-label="${esc(t(v.label))}">${icon(v.icon)}</button>`
+                : `<button data-i="${j}">${esc(t(v.label))}</button>`)).join('')}</div></div>`).join('')}</div></div>`).join('')}
           <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button>
         </div>` : ''}
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>

@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 import Ajv from 'ajv';
 import { scenario, statesAt, offsetOf } from './preview/scenario.mjs';
+import { ICONS } from './preview/icons.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'dist');
@@ -48,6 +49,7 @@ export function checkWidget(dir, widget, validate) {
     for (const v of o.values) {
       const hasSet = v !== null && typeof v === 'object' && v.set;
       if (!hasSet && !o.key) errs.push(`preview/options/${i}: a value without set needs the option's key`);
+      if (v?.icon && !ICONS[v.icon]) errs.push(`preview/options/${i}: no icon ${v.icon} in tools/preview/icons.mjs`);
     }
   }
   const optKeys = new Set((widget.preview?.options || []).map((o) => o.key).filter(Boolean));
@@ -80,7 +82,7 @@ export function checkWidget(dir, widget, validate) {
 // of the widget's i18n.yaml. The page's own text is in tools/preview/i18n.mjs.
 export function widgetStrings(w) {
   const out = [w.name, w.description];
-  for (const o of (w.preview?.options || []).map(previewOption)) out.push(o.label, ...o.values.map((v) => v.label));
+  for (const o of (w.preview?.options || []).map(previewOption)) out.push(o.section, o.label, ...o.values.map((v) => v.label));
   for (const st of w.states) out.push(st.title, st.label, st.description, ...(st.timeline || []).map((e) => e.note));
   return [...new Set(out.filter((x) => typeof x === 'string').map((x) => x.trim()).filter(Boolean))];
 }
@@ -153,11 +155,12 @@ const cap = (v) => (v === true ? 'On' : v === false ? 'Off' : String(v).charAt(0
 export function previewOption(o) {
   const defaults = { ...(o.defaults || {}), ...(o.key && o.default !== undefined ? { [o.key]: o.default } : {}) };
   const values = o.values.map((v) => {
-    if (v !== null && typeof v === 'object' && v.set) return { label: v.label || Object.values(v.set).map(cap).join(' '), set: v.set };
+    const icon = (v !== null && typeof v === 'object' && v.icon) || '';
+    if (v !== null && typeof v === 'object' && v.set) return { label: v.label || Object.values(v.set).map(cap).join(' '), icon, set: v.set };
     const val = v !== null && typeof v === 'object' ? v.value : v;
-    return { label: (typeof v === 'object' && v?.label) || cap(val), set: { [o.key]: val } };
+    return { label: (typeof v === 'object' && v?.label) || cap(val), icon, set: { [o.key]: val } };
   });
-  return { label: o.label || o.key, defaults, values };
+  return { label: o.label || o.key, section: o.section || '', defaults, values };
 }
 
 // The looks the render test puts every state through: each option value on

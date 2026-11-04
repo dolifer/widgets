@@ -150,14 +150,18 @@ test('zip holds the files, readable back', () => {
 
 test('preview options: one key or a set of keys per chip', () => {
   assert.deepEqual(previewOption({ key: 'gradient', label: 'Gradient', default: false, values: [false, true] }), {
-    label: 'Gradient', defaults: { gradient: false },
-    values: [{ label: 'Off', set: { gradient: false } }, { label: 'On', set: { gradient: true } }],
+    label: 'Gradient', section: '', defaults: { gradient: false },
+    values: [{ label: 'Off', icon: '', set: { gradient: false } }, { label: 'On', icon: '', set: { gradient: true } }],
   });
+  const iconed = previewOption({ section: 'Layout', key: 'align', values: [{ value: 'left', label: 'Left', icon: 'align-left' }] });
+  assert.deepEqual([iconed.section, iconed.values[0].icon], ['Layout', 'align-left']);
   const icons = previewOption({ label: 'Icons', defaults: { a: true, b: true }, values: [{ label: 'Both', set: { a: true, b: true } }, { set: { a: false, b: false } }] });
-  assert.deepEqual(icons.values[0], { label: 'Both', set: { a: true, b: true } });
+  assert.deepEqual(icons.values[0], { label: 'Both', icon: '', set: { a: true, b: true } });
   assert.equal(icons.values[1].label, 'Off Off');
   const w = good(); w.preview = { options: [{ label: 'X', values: ['a', 'b'] }] };
   assert.ok(tmpWidget(w).errs.some((e) => /needs the option's key/.test(e)));
+  w.preview = { options: [{ key: 'x', values: [{ value: 'a', icon: 'no-such-icon' }, 'b'] }] };
+  assert.ok(tmpWidget(w).errs.some((e) => /no icon no-such-icon/.test(e)));
 });
 
 test('test variants: each option value alone, the matrix, then extra configs', () => {

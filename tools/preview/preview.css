@@ -48,7 +48,14 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .seg button small { font-weight: 400; opacity: .7 }
 .seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12) }
 /* Card options: label above a small segment, so two or three groups fit a phone row. */
-.bar.opts { margin-top: 4px; gap: 8px 10px; align-items: flex-end }
+/* Card options: one row per section, its name in a narrow column on the left. */
+.opts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 12px; align-items: end; margin-top: 4px }
+.sec { display: contents }
+.sec h4 { margin: 0 0 7px; font-size: 12px; font-weight: 500; color: var(--text) }
+.opts .bar { gap: 6px 10px; align-items: flex-end }
+.opts .seg button.ic { padding: 3px 6px; display: inline-grid; place-items: center }
+.opts .seg button.ic svg { display: block }
+.opts #optreset { grid-column: 2; justify-self: start }
 .grp { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px }
 .grp > span { font-size: 11px; color: var(--muted); padding-left: 2px }
 .opts .seg { padding: 2px; border-radius: 7px }
