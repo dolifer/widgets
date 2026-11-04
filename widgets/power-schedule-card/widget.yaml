@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.5.0
+version: 1.5.1
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -22,6 +22,7 @@ preview:
         - { label: Next, set: { show_now_icon: false, show_next_icon: true } }
         - { label: None, set: { show_now_icon: false, show_next_icon: false } }
     - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next }, { value: now, label: Now }, { value: none, label: None }] }
+    - { key: outage_color, label: Outage, default: mixed, values: [{ value: mixed, label: Mixed }, { value: red, label: Red }, { value: orange, label: Orange }] }
     - { key: split, label: Split, default: rise, values: [{ value: rise, label: ╱ Rise }, { value: fall, label: ╲ Fall }, { value: straight, label: ― Straight }] }
     - { key: gradient, label: Gradient, default: false, values: [{ value: false, label: Off }, { value: blend, label: Blend }, { value: soft, label: Soft }, { value: corners, label: Corners }] }
 config:
@@ -393,6 +394,23 @@ states:
       sensor.next_outage: unknown
       sensor.next_restore: now+2h30m
     expect: [Немає світла, за графіком, Світло буде]
+
+  - id: outage-orange
+    title: Outages in orange (outage_color orange)
+    description: No power and the coming outage share one colour.
+    config:
+      outage_color: orange
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
 
   - id: horizontal-centered
     title: Side by side, centred, next icon in the centre

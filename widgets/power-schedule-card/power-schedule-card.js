@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.5.0';
+  const VERSION = '1.5.1';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -257,7 +257,10 @@
       const powerOn = this._powerOn();
       const since = this._state(c.entity)?.last_changed;
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
-      const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : 'off');
+      // outage_color: red or orange paints every outage the same, now and next
+      // (unset: no power is red, the coming outage is orange).
+      const outKey = { red: 'off', orange: 'warn' }[c.outage_color];
+      const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : outKey || 'off');
       const horiz = c.layout === 'horizontal';
       // align and valign place the "now" block; the "next" block mirrors it
       // (left ↔ right, top ↔ bottom) so the two balance across the card.
@@ -280,7 +283,7 @@
       let nextHtml = '', nextTint = nowColor;
       if (next) {
         const k = KINDS[next.kind];
-        const nextColor = this._color(k.color);
+        const nextColor = this._color(next.kind === 'outage' && outKey ? outKey : k.color);
         nextTint = nextColor;
         let sub = k.sub ? this._t(k.sub) : '';
         let when = '';
