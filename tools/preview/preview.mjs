@@ -108,15 +108,13 @@ function layout() {
     </header>
     <main class="layout">
       <section class="work">
-        <div class="studio">
+        <div class="bar">
+          <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
+            ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
+        </div>
+        <div class="studio" id="studio">
           ${OPTS.length ? `<div class="opts side-a">${sectionsHtml(0)}</div>` : ''}
-          <div class="center">
-            <div class="bar">
-              <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
-                ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
-            </div>
-            <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
-          </div>
+          <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
           ${OPTS.length ? `<div class="opts side-b">${sectionsHtml(1)}
             <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button></div>` : ''}
         </div>
@@ -217,7 +215,7 @@ function update(force = false) {
   clock.set(at);
   const th = theme();
   if (force || last.theme !== th) {
-    applyTheme($('stage'), th); last.theme = th;
+    applyTheme(embed ? $('stage') : $('studio'), th); last.theme = th;   // the options share the card's backdrop
     if (!embed) document.documentElement.dataset.theme = th;   // the page follows the card's theme
   }
   if (force || last.width !== ui.width) { $('frame').style.width = `${ui.width}px`; last.width = ui.width; }

@@ -56,19 +56,16 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .opts .seg button.ic { padding: 3px 6px; display: inline-grid; place-items: center }
 .opts .seg button.ic svg { display: block }
 .opts #optreset { grid-column: 2; justify-self: start }
-.studio { display: flex; flex-direction: column; gap: 12px }
-/* Narrow screens: the card first, then both option halves as one list. */
-@media (max-width: 1099px) {
-  .studio .center { order: -1 }
+.studio { display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 16px }
+.studio .stage { border: 0; border-radius: 0; padding: 16px 0 }
+/* Narrow screens: the card first, then both option halves under it, in the box. */
+@media (max-width: 899px) {
+  .studio .stage { order: -1 }
 }
-.center { min-width: 0; display: flex; flex-direction: column; gap: 12px }
-/* Wide screens: the options flank the card, half on each side. */
-@media (min-width: 1100px) {
-  /* The options hug the card's box on both sides, the three centred as one. */
-  .studio { display: grid; grid-template-columns: max-content minmax(0, max-content) max-content; justify-content: center; align-items: start; gap: 16px }
-  .studio .center { align-items: center }
-  .studio .stage { min-width: 380px }
-  .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0; padding-top: 2px; min-width: 150px }
+/* Wider: the box holds the options left and right of the card, in the space beside it. */
+@media (min-width: 900px) {
+  .studio { display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr); align-items: center; gap: 24px; padding: 20px 24px }
+  .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0; justify-self: center }
   .studio .sec { display: flex; flex-direction: column; align-items: flex-start; gap: 6px }
   .studio .sec h4 { margin: 0 }
   .studio .opts .bar { flex-direction: column; align-items: flex-start; gap: 6px }
