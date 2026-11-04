@@ -2,6 +2,7 @@
 // move the clock to watch the card react as the state's timeline plays.
 //
 // URL: ?state=<id>&t=<minutes>&theme=dark|light&w=<px>&lang=<code>&o.<key>=<value>
+//      &cfg=<json> merges any config (the render test uses it).
 //      ?embed=1 shows only the card (the gallery uses it).
 import { clock, applyTheme, makeHass, loadCard } from './hass.mjs';
 import { statesAt, startTime } from './scenario.mjs';
@@ -32,9 +33,11 @@ function readOpts() {
   }
   return o;
 }
-const stateValue = (opt, k) => (k in ui.state.config ? ui.state.config[k] : opt.defaults[k]);
+const stateValue = (opt, k) => (k in extra ? extra[k] : k in ui.state.config ? ui.state.config[k] : opt.defaults[k]);
 const optValue = (opt, k) => (k in ui.opts ? ui.opts[k] : stateValue(opt, k));
-const config = () => ({ ...ui.state.config, ...ui.opts });
+let extra = {};
+try { extra = JSON.parse(q.get('cfg') || '{}'); } catch { extra = {}; }
+const config = () => ({ ...ui.state.config, ...extra, ...ui.opts });
 
 // The card config as YAML, for the panel and the Copy button.
 function toYaml(v, ind = '') {
@@ -223,6 +226,7 @@ function writeUrl() {
   if (ui.width !== W.width) p.set('w', ui.width);
   if (ui.lang) p.set('lang', ui.lang);
   for (const [k, v] of Object.entries(ui.opts)) p.set(`o.${k}`, v);
+  if (Object.keys(extra).length) p.set('cfg', JSON.stringify(extra));
   const url = `?${p}`;
   if (url !== location.search) history.replaceState(null, '', url);
 }

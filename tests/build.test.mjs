@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv from 'ajv';
-import { loadWidgets, checkWidget, loadSchema, build, previewOption } from '../tools/build.mjs';
+import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants } from '../tools/build.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
 import { parseTag, pack, zip } from '../tools/release.mjs';
 
@@ -157,4 +157,18 @@ test('preview options: one key or a set of keys per chip', () => {
   assert.equal(icons.values[1].label, 'Off Off');
   const w = good(); w.preview = { options: [{ label: 'X', values: ['a', 'b'] }] };
   assert.ok(tmpWidget(w).errs.some((e) => /needs the option's key/.test(e)));
+});
+
+test('test variants: each option value alone, the matrix, then extra configs', () => {
+  const w = {
+    preview: { options: [{ key: 'a', default: 1, values: [1, 2] }, { key: 'b', default: 'x', values: ['x', 'y'] }] },
+    test: { matrix: ['a', 'b'], configs: [{ height: 200 }, { a: 2 }] },
+  };
+  assert.deepEqual(testVariants(w), [
+    { a: 2 }, { b: 'y' },
+    { a: 1, b: 'x' }, { a: 1, b: 'y' }, { a: 2, b: 'x' }, { a: 2, b: 'y' },
+    { height: 200 },
+  ]);
+  const bad = good(); bad.preview = { options: [{ key: 'a', values: [1, 2] }] }; bad.test = { matrix: ['zz'] };
+  assert.ok(tmpWidget(bad).errs.some((e) => /zz is not a preview option key/.test(e)));
 });

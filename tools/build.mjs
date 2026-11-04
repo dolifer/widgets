@@ -50,6 +50,8 @@ export function checkWidget(dir, widget, validate) {
       if (!hasSet && !o.key) errs.push(`preview/options/${i}: a value without set needs the option's key`);
     }
   }
+  const optKeys = new Set((widget.preview?.options || []).map((o) => o.key).filter(Boolean));
+  for (const k of widget.test?.matrix || []) if (!optKeys.has(k)) errs.push(`test/matrix: ${k} is not a preview option key`);
   const ids = new Set();
   for (const st of widget.states) {
     if (ids.has(st.id)) errs.push(`states: id ${st.id} is used twice`);
@@ -123,6 +125,26 @@ export function previewOption(o) {
     return { label: (typeof v === 'object' && v?.label) || cap(val), set: { [o.key]: val } };
   });
   return { label: o.label || o.key, defaults, values };
+}
+
+// The looks the render test puts every state through: each option value on
+// its own, every combination of test.matrix, and each test.configs entry.
+export function testVariants(w) {
+  const opts = (w.preview?.options || []).map(previewOption);
+  const out = [], seen = new Set();
+  const add = (cfg) => { const k = JSON.stringify(cfg); if (!seen.has(k) && k !== '{}') { seen.add(k); out.push(cfg); } };
+  for (const o of opts) for (const v of o.values) {
+    if (!Object.entries(v.set).every(([k, x]) => o.defaults[k] === x)) add(v.set);
+  }
+  let combos = [{}];
+  for (const key of w.test?.matrix || []) {
+    const o = (w.preview?.options || []).find((x) => x.key === key);
+    const vals = previewOption(o).values.map((v) => v.set);
+    combos = combos.flatMap((c) => vals.map((v) => ({ ...c, ...v })));
+  }
+  for (const c of combos) add(c);
+  for (const c of w.test?.configs || []) add(c);
+  return out;
 }
 
 // What the preview page needs for one widget: the states with their config as YAML.

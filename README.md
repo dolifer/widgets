@@ -72,6 +72,19 @@ preview:
 
 ## Layout checks
 
+States are situations only: what the sensors say and how that changes. Looks
+are not states; they are `preview.options`, picked with chips. The render
+test puts every state through them anyway: each option value on its own,
+every combination of `test.matrix`, and each config in `test.configs`
+(passed to the page as `?cfg=<json>`):
+
+```yaml
+test:
+  matrix: [layout, align, valign]
+  configs:
+    - { height: 130 }
+```
+
 `npm run test:render` opens every state, at the start and at each timeline
 event, at phone width (320 px) and the widget's own width, in every declared
 language. If `widgets/<id>/render-check.js` exists, it runs after each render:

@@ -104,6 +104,16 @@ properties:
                     properties:
                       set: { type: object, minProperties: 1, description: "Config keys this chip sets" }
                       label: { type: string }
+  test:
+    description: >
+      Extra looks for the render test. Every state is rendered with each
+      preview option value on its own, every combination of the matrix keys,
+      and each config here.
+    type: object
+    additionalProperties: false
+    properties:
+      matrix: { type: array, items: { type: string }, description: "Option keys to render in every combination" }
+      configs: { type: array, items: { type: object }, description: "Config overrides to render each state with" }
   config:
     description: Card config shared by every state; `type` is added for you
     type: object

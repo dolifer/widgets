@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.5.1
+version: 1.5.2
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -25,11 +25,30 @@ preview:
     - { key: outage_color, label: Outage, default: mixed, values: [{ value: mixed, label: Mixed }, { value: red, label: Red }, { value: orange, label: Orange }] }
     - { key: split, label: Split, default: rise, values: [{ value: rise, label: ╱ Rise }, { value: fall, label: ╲ Fall }, { value: straight, label: ― Straight }] }
     - { key: gradient, label: Gradient, default: false, values: [{ value: false, label: Off }, { value: blend, label: Blend }, { value: soft, label: Soft }, { value: corners, label: Corners }] }
+# The render test runs every state with each option value above on its own,
+# with every combination of the `matrix` keys, and with each extra config.
+test:
+  matrix: [layout, align, valign]
+  configs:
+    - { height: 130 }
+    - { height: 220, valign: center }
+    - { layout: horizontal, align: center, valign: center, seam_icon: next }
+    - { colors: { on: "#2e7d32", warn: "#ef6c00" } }
+    - icons:
+        power_on: mdi:home-lightning-bolt
+        power_planned: mdi:home-off
+        outage: mdi:transmission-tower-off
+        restore: mdi:transmission-tower
+
 config:
   entity: binary_sensor.grid
   next_outage: sensor.next_outage
   next_restore: sensor.next_restore
 
+# States are situations only: what the sensors say and how that changes.
+# Looks (layout, align, icons, gradient, …) are picked with the preview's
+# option chips, and the render test runs every state through them (`test`).
+#
 # The two halves always agree: while the power is off the top says why
 # (scheduled, emergency, unscheduled) and the bottom says when it comes back;
 # while it is on the bottom says when the next outage is. `expect` is the text
@@ -187,15 +206,13 @@ states:
         expect: [Світло є, Наступне відключення невідоме, "!Світло буде"]
 
   - id: english-inverted
-    title: English, inverted sensor, own colours
-    description: An outage sensor that is "on" during an outage, with invert, custom colours and a lower card.
+    title: English, inverted sensor
+    description: An outage sensor that is "on" during an outage, read with invert.
     language: en
     theme: light
     config:
       entity: binary_sensor.power_outage
       invert: true
-      height: 130
-      colors: { on: "#2e7d32", warn: "#ef6c00" }
     entities:
       binary_sensor.power_outage: { state: "off", changed: now-6h12m }
       sensor.next_outage: now+25m
@@ -218,258 +235,3 @@ states:
     entities:
       binary_sensor.grid: { state: "on", changed: now-2h }
     expect: [Світло є, вже 2 г 00 хв, "!Далі"]
-
-  - id: icons-off
-    title: Icons hidden
-    description: show_now_icon and show_next_icon set to false.
-    config:
-      show_now_icon: false
-      show_next_icon: false
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-
-  - id: custom-icons
-    title: Own icons (mdi)
-    description: Any state's icon replaced with an mdi icon; the rest keep the built-in ones.
-    config:
-      icons:
-        power_on: mdi:home-lightning-bolt
-        power_planned: mdi:home-off
-        outage: mdi:transmission-tower-off
-        restore: mdi:transmission-tower
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-25m }
-      sensor.next_outage: now+50m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+50m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+3h50m
-
-  - id: horizontal
-    title: Side by side (layout horizontal)
-    description: Now on the left, next on the right; long titles wrap to two lines.
-    config:
-      layout: horizontal
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+29h40m
-        expect: [за графіком, Світло буде]
-      - at: now+3h
-        note: Schedule goes down
-        set:
-          sensor.next_restore: unavailable
-        expect: [Немає світла, Графік недоступний]
-      - at: now+4h
-        note: Power back, nothing planned
-        set:
-          binary_sensor.grid: "on"
-          sensor.next_outage: unknown
-          sensor.next_restore: unknown
-        expect: [Світло є, Відключень не заплановано]
-
-  - id: horizontal-unknown
-    title: Side by side, power sensor unavailable
-    config:
-      layout: horizontal
-    entities:
-      binary_sensor.grid: unavailable
-      sensor.next_outage: now+3h
-      sensor.next_restore: unknown
-
-  - id: align-center
-    title: Text centred (align center)
-    config:
-      align: center
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-        expect: [за графіком, Світло буде]
-
-  - id: tall-right-center
-    title: Taller card, right-aligned, centred vertically
-    description: height 220 gives each half room; valign center puts each block in the middle of its half.
-    config:
-      height: 220
-      align: right
-      valign: center
-    entities:
-      binary_sensor.grid: { state: "off", changed: now-20m }
-      sensor.next_outage: unknown
-      sensor.next_restore: now+2h40m
-    expect: [Немає світла, за графіком, Світло буде, "21:00"]
-
-  - id: seam-icon
-    title: Next icon in the centre (seam_icon next)
-    description: The next state's icon replaces the arrow; the bottom half drops its own icon.
-    config:
-      seam_icon: next
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-      - at: now+5h40m
-        note: Power back, nothing planned
-        set:
-          binary_sensor.grid: "on"
-          sensor.next_restore: unknown
-
-  - id: seam-now-icon
-    title: Now icon in the centre (seam_icon now)
-    config:
-      seam_icon: now
-      align: center
-    entities:
-      binary_sensor.grid: { state: "off", changed: now-40m }
-      sensor.next_outage: unknown
-      sensor.next_restore: now+2h
-    expect: [Немає світла, за графіком, Світло буде]
-    timeline:
-      - at: now+2h
-        note: Power back
-        set:
-          binary_sensor.grid: "on"
-          sensor.next_outage: now+6h
-          sensor.next_restore: unknown
-
-  - id: split-fall
-    title: Diagonal the other way (split fall)
-    config:
-      split: fall
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-
-  - id: split-straight-side
-    title: Straight split, side by side, gradient
-    config:
-      split: straight
-      layout: horizontal
-      gradient: soft
-    entities:
-      binary_sensor.grid: { state: "off", changed: now-30m }
-      sensor.next_outage: unknown
-      sensor.next_restore: now+2h30m
-    expect: [Немає світла, за графіком, Світло буде]
-
-  - id: outage-orange
-    title: Outages in orange (outage_color orange)
-    description: No power and the coming outage share one colour.
-    config:
-      outage_color: orange
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-
-  - id: horizontal-centered
-    title: Side by side, centred, next icon in the centre
-    config:
-      layout: horizontal
-      align: center
-      valign: center
-      seam_icon: next
-    entities:
-      binary_sensor.grid: { state: "off", changed: now-50m }
-      sensor.next_outage: unknown
-      sensor.next_restore: now+3h10m
-    expect: [Немає світла, за графіком, Світло буде]
-    timeline:
-      - at: now+3h10m
-        note: Power back
-        set:
-          binary_sensor.grid: "on"
-          sensor.next_outage: now+8h
-          sensor.next_restore: unknown
-        expect: [Світло є, Відключення]
-
-  - id: horizontal-bottom-right
-    title: Side by side, right-aligned at the bottom
-    config:
-      layout: horizontal
-      align: right
-      valign: bottom
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-3h }
-      sensor.next_outage: now+45m
-      sensor.next_restore: unknown
-
-  - id: gradient
-    title: Gradient (gradient blend)
-    description: One colour runs smoothly into the other across the card.
-    config:
-      gradient: blend
-    entities:
-      binary_sensor.grid: { state: "on", changed: now-1h04m }
-      sensor.next_outage: now+1h40m
-      sensor.next_restore: unknown
-    timeline:
-      - at: now+1h40m
-        note: Outage starts
-        set:
-          binary_sensor.grid: "off"
-          sensor.next_outage: unknown
-          sensor.next_restore: now+4h
-        expect: [за графіком, Світло буде]
-
-  - id: gradient-horizontal
-    title: Gradient, side by side, centred icon
-    config:
-      gradient: corners
-      layout: horizontal
-      seam_icon: next
-    entities:
-      binary_sensor.grid: { state: "off", changed: now-15m }
-      sensor.next_outage: unknown
-      sensor.next_restore: unknown
-    expect: [Немає світла, поза графіком, час невідомий]

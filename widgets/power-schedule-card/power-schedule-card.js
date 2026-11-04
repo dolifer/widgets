@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.5.1';
+  const VERSION = '1.5.2';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -313,7 +313,9 @@
       // valign: where each text block sits in its half. Stacked, "top" and
       // "bottom" mean the card's edges; the "now" block lives above the seam's
       // highest point and the "next" block below its lowest.
-      const BLOCK = 46, EDGE = 10, NEAR = 6;
+      // NEAR: the gap to the seam when a block sits against it. Centred text
+      // runs over the arrow in the middle, so it keeps half the circle clear too.
+      const BLOCK = 46, EDGE = 10, NEAR = align === 'center' && !horiz ? 6 + 16 : 6;
       // split: rise (low at the left, high at the right), fall (the mirror
       // image) or straight. The rooms above and below stay the same.
       // gradient: blend, soft or corners; true (1.3/1.4) means soft.
@@ -374,13 +376,14 @@
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
     /* gradient: one wash over the whole card, square to the split (--ga, set
-       from the card's size). blend: one colour runs smoothly into the other.
+       from the card's size). blend: one colour runs smoothly into the other; the next colour takes a
+       little more of the card (full by 80%), so what comes next reads clearly.
        soft: each fades a little toward the split, which stays crisp.
        corners: each colour glows from its own corner over a dark card. */
     .g { --ga:180deg }
     .g.h { --ga:90deg }
     .g .next { background:none }
-    .g-blend { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 40%, transparent) 0%, color-mix(in srgb, var(--tint2) 40%, transparent) 100%), var(--bg) }
+    .g-blend { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 40%, transparent) 0%, color-mix(in srgb, var(--tint2) 42%, transparent) 80%), var(--bg) }
     .g-soft { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 36%, transparent) 0%, color-mix(in srgb, var(--tint) 22%, transparent) 50%, color-mix(in srgb, var(--tint2) 22%, transparent) 50%, color-mix(in srgb, var(--tint2) 36%, transparent) 100%), var(--bg) }
     .g-corners { background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--tint) 46%, transparent), transparent 60%),
       radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--tint2) 46%, transparent), transparent 60%),
