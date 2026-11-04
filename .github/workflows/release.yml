@@ -3,11 +3,13 @@ name: Release
 # All cards ship as one bundle, widgets.js, the file HACS installs. Bump
 # "version" in package.json (and each changed card's own version), merge, then:
 #   git tag v1.0.1 && git push origin v1.0.1
-# The tag must equal package.json. A pre-release version (1.0.0-beta.1) makes
+# or run this workflow on main (Actions → Release → Run workflow), which tags
+# main as v<package.json version> itself. The tag must equal package.json. A pre-release version (1.0.0-beta.1) makes
 # a draft pre-release, published by hand once it has been tried.
 on:
   push:
     tags: ['v[0-9]*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -26,14 +28,30 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm test
+      # A pushed tag names itself. Run by hand, tag main's commit with
+      # package.json's version; a tag made with this token starts no new run.
+      - name: Tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "$GITHUB_REF" != refs/heads/main ]; then echo "::error::run it on main"; exit 1; fi
+          tag="v$(node -p "require('./package.json').version")"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then echo "::error::$tag exists: bump package.json"; exit 1; fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" >/dev/null
+          git tag "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Pack
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: node tools/release.mjs "$TAG"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           prev=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -vx "$TAG" | head -n1 || true)
           {

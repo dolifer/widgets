@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "description": "Home Assistant cards with generated state previews",
+  "homepage": "https://dolifer.github.io/widgets/",
+  "repository": { "type": "git", "url": "https://github.com/dolifer/widgets" },
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "node tools/build.mjs",

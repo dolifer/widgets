@@ -7,12 +7,13 @@
 import { clock, applyTheme, makeHass, loadCard } from './hass.mjs';
 import { statesAt, startTime } from './scenario.mjs';
 import { translator, remembered } from './i18n.mjs';
-import { icon } from './icons.mjs';
+import { icon, github } from './icons.mjs';
 
 clock.install();
 
 const W = JSON.parse(document.getElementById('data').textContent);
 const app = document.getElementById('app');
+const repo = app.dataset.repo;
 const q = new URLSearchParams(location.search);
 const embed = q.has('embed');
 
@@ -104,6 +105,7 @@ function layout() {
         <button data-v="dark" title="${esc(t('Dark'))}" aria-label="${esc(t('Dark'))}">☾</button><button data-v="light" title="${esc(t('Light'))}" aria-label="${esc(t('Light'))}">☀</button></div>
       ${W.languages.length > 1 ? `<div class="seg" id="lang" role="group" aria-label="${esc(t('Language'))}">
         ${W.languages.map((c) => `<button data-v="${esc(c)}" lang="${esc(c)}" title="${esc(langName(c))}">${esc(langShort(c))}</button>`).join('')}</div>` : ''}
+      ${repo ? `<a class="btn ghost gh" href="${esc(repo)}/tree/main/widgets/${esc(W.id)}" title="${esc(t('Source on GitHub'))}" aria-label="${esc(t('Source on GitHub'))}">${github}</a>` : ''}
       <a class="btn" href="${esc(W.script)}" download title="${esc(W.script)}" aria-label="${esc(t('Download'))}">↓<span class="wide-only"> ${esc(t('Download'))}</span></a>
     </header>
     <main class="layout">
