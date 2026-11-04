@@ -64,8 +64,12 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 }
 /* Wider: the box holds the options left and right of the card, in the space beside it. */
 @media (min-width: 900px) {
-  .studio { display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr); align-items: center; gap: 24px; padding: 20px 24px }
-  .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0; justify-self: center }
+  /* Each half is pinned to its edge of the box and to the top, so picking
+     another card width or layout never moves the chips. */
+  .studio { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; align-items: start; gap: 24px; padding: 20px 24px }
+  .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0 }
+  .studio .side-b { justify-self: end }
+  .studio .stage { align-self: center }
   .studio .sec { display: flex; flex-direction: column; align-items: flex-start; gap: 6px }
   .studio .sec h4 { margin: 0 }
   .studio .opts .bar { flex-direction: column; align-items: flex-start; gap: 6px }
