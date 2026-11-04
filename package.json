@@ -1,5 +1,6 @@
 {
   "name": "widgets",
+  "version": "1.0.0-beta.1",
   "private": true,
   "type": "module",
   "description": "Home Assistant cards with generated state previews",

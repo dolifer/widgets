@@ -5,8 +5,10 @@ Home Assistant cards and the preview site generated from their YAML. Read
 
 ## DO NOT
 
-**DO NOT put a job on a GitHub-hosted runner.**
-Cause: hosted minutes are billed. Every job is `runs-on: [self-hosted, widgets]`.
+**DO NOT put a job on a self-hosted runner.**
+Cause: the repo is public, so a fork's pull request could run its own
+workflow on that machine. Hosted minutes are free for public repos. Every job
+is `runs-on: ubuntu-latest`.
 
 **DO NOT put anything from the owner's home in a widget.**
 Cause: the Pages site and the releases are public. No hostnames, IPs, real
@@ -17,8 +19,9 @@ entity ids, tokens or names. States in `widget.yaml` use made-up ids
 Cause: a card is one JS file copied into `/config/www`. Users can't run npm.
 
 **DO NOT change a card without bumping its version.**
-Do: `version` in `widget.yaml` and `VERSION` in the script, together. The
-build fails when they differ, and a release tag must match both.
+Do: `version` in `widget.yaml` and `VERSION` in the script, together (the
+build fails when they differ), and the bundle's `version` in `package.json`,
+which a release tag `v<version>` must match.
 
 ## Always
 

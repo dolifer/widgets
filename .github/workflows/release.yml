@@ -1,55 +1,50 @@
 name: Release
 
-# One widget, one release: push a tag <widget>-v<semver>, for example
-#   git tag power-schedule-card-v1.0.1 && git push origin power-schedule-card-v1.0.1
-# The tag's version must equal that widget's widget.yaml (and the script's
-# VERSION, which the build checks). The release carries
-# <widget>-<version>.zip: the card JS, its README and a hacs.json. A version
-# with a pre-release part (1.0.0-beta.1) makes a draft pre-release.
+# All cards ship as one bundle, widgets.js, the file HACS installs. Bump
+# "version" in package.json (and each changed card's own version), merge, then:
+#   git tag v1.0.1 && git push origin v1.0.1
+# The tag must equal package.json. A pre-release version (1.0.0-beta.1) makes
+# a draft pre-release, published by hand once it has been tried.
 on:
   push:
-    tags: ['*-v[0-9]*']
+    tags: ['v[0-9]*']
 
 permissions:
   contents: write
 
 jobs:
   release:
-    runs-on: [self-hosted, widgets]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0   # the notes compare with the widget's previous tag
+          fetch-depth: 0   # the notes compare with the previous tag
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - name: Pack
-        id: pack
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          zip_path=$(node tools/release.mjs "$TAG")
-          echo "zip=$zip_path" >> "$GITHUB_OUTPUT"
+        run: node tools/release.mjs "$TAG"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          ZIP: ${{ steps.pack.outputs.zip }}
         run: |
-          widget="${TAG%-v*}"
-          prev=$(git tag --list "${widget}-v*" --sort=-v:refname | grep -vx "$TAG" | head -n1 || true)
+          prev=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -vx "$TAG" | head -n1 || true)
           {
-            echo "Widget: \`$widget\`, version ${TAG##*-v}."
-            echo
+            cat release/notes.md
             if [ -n "$prev" ]; then
               echo "Changes since $prev:"
-              git log --format='- %s' "$prev..$TAG" -- "widgets/$widget"
+              git log --format='- %s' "$prev..$TAG" -- widgets
             else
               echo "First release."
             fi
           } > notes.md
-          # A pre-release version (1.0.0-beta.1) becomes a draft pre-release,
-          # published by hand once it has been tried.
           flags=()
-          case "${TAG##*-v}" in *-*) flags=(--prerelease --draft) ;; esac
-          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file notes.md --verify-tag "${flags[@]}"
+          case "${TAG#v}" in *-*) flags=(--prerelease --draft) ;; esac
+          gh release create "$TAG" release/widgets.js --title "$TAG" --notes-file notes.md --verify-tag "${flags[@]}"
