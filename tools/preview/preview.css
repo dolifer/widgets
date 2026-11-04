@@ -33,7 +33,7 @@ code, pre, table { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .btn.ghost { background: var(--chip); color: var(--text) }
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 
-.layout { padding: 20px; max-width: 1080px; margin: 0 auto }
+.layout { padding: 20px; max-width: 1400px; margin: 0 auto }
 /* States: toggle buttons in two rows, so any state is one tap away. */
 .states { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 3px; background: var(--chip); border-radius: 10px; padding: 3px }
 .states button { all: unset; cursor: pointer; padding: 8px 10px; border-radius: 7px; text-align: center; font-weight: 500; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -56,6 +56,21 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .opts .seg button.ic { padding: 3px 6px; display: inline-grid; place-items: center }
 .opts .seg button.ic svg { display: block }
 .opts #optreset { grid-column: 2; justify-self: start }
+.studio { display: flex; flex-direction: column; gap: 12px }
+/* Narrow screens: the card first, then both option halves as one list. */
+@media (max-width: 1099px) {
+  .studio .center { order: -1 }
+}
+.center { min-width: 0; display: flex; flex-direction: column; gap: 12px }
+/* Wide screens: the options flank the card, half on each side. */
+@media (min-width: 1100px) {
+  .studio { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; align-items: start; gap: 20px }
+  .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0; padding-top: 2px; min-width: 150px }
+  .studio .sec { display: flex; flex-direction: column; align-items: flex-start; gap: 6px }
+  .studio .sec h4 { margin: 0 }
+  .studio .opts .bar { flex-direction: column; align-items: flex-start; gap: 6px }
+  .studio .opts #optreset { align-self: flex-start }
+}
 .grp { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px }
 .grp > span { font-size: 11px; color: var(--muted); padding-left: 2px }
 .opts .seg { padding: 2px; border-radius: 7px }

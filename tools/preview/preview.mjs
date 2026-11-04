@@ -77,6 +77,19 @@ function sections() {
   return [...out];
 }
 
+// The sections split in two, by how many chip rows each holds: one half
+// goes left of the card, the other right (above it on a narrow screen).
+function sectionsHtml(half) {
+  const all = sections(), total = OPTS.length;
+  let n = 0, cut = all.length;
+  for (const [k, [, list]] of all.entries()) { n += list.length; if (n >= total / 2) { cut = k + 1; break; } }
+  return (half ? all.slice(cut) : all.slice(0, cut)).map(([name, list]) => `<div class="sec">${name ? `<h4>${esc(t(name))}</h4>` : ''}<div class="bar">
+    ${list.map(([o, i]) => `<div class="grp"><span>${esc(t(o.label))}</span><div class="seg" role="group" aria-label="${esc(t(o.label))}" data-opt="${i}">
+      ${o.values.map((v, j) => (v.icon
+        ? `<button data-i="${j}" class="ic" title="${esc(t(v.label))}" aria-label="${esc(t(v.label))}">${icon(v.icon)}</button>`
+        : `<button data-i="${j}">${esc(t(v.label))}</button>`)).join('')}</div></div>`).join('')}</div></div>`).join('');
+}
+
 function layout() {
   if (embed) {
     document.body.classList.add('embed');
@@ -95,19 +108,18 @@ function layout() {
     </header>
     <main class="layout">
       <section class="work">
-        <div class="bar">
-          <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
-            ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
+        <div class="studio">
+          ${OPTS.length ? `<div class="opts side-a">${sectionsHtml(0)}</div>` : ''}
+          <div class="center">
+            <div class="bar">
+              <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
+                ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
+            </div>
+            <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
+          </div>
+          ${OPTS.length ? `<div class="opts side-b">${sectionsHtml(1)}
+            <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button></div>` : ''}
         </div>
-        ${OPTS.length ? `<div class="opts" id="opts">
-          ${sections().map(([name, list]) => `<div class="sec">${name ? `<h4>${esc(t(name))}</h4>` : ''}<div class="bar">
-            ${list.map(([o, i]) => `<div class="grp"><span>${esc(t(o.label))}</span><div class="seg" role="group" aria-label="${esc(t(o.label))}" data-opt="${i}">
-              ${o.values.map((v, j) => (v.icon
-                ? `<button data-i="${j}" class="ic" title="${esc(t(v.label))}" aria-label="${esc(t(v.label))}">${icon(v.icon)}</button>`
-                : `<button data-i="${j}">${esc(t(v.label))}</button>`)).join('')}</div></div>`).join('')}</div></div>`).join('')}
-          <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button>
-        </div>` : ''}
-        <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
         <section class="player">
           <nav class="states" aria-label="${esc(t('States'))}" style="--cols:${Math.ceil(W.states.length / 2)}">
             ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(t(s.title))}">${esc(t(s.label))}</button>`).join('')}
@@ -282,11 +294,11 @@ function bind() {
     ui.playing = false; cancelAnimationFrame(raf);
     selectState(ui.state);
   });
-  $('opts')?.addEventListener('click', (e) => {
+  document.querySelectorAll('.opts').forEach((el) => el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-i]'); if (!b) return;
     const opt = OPTS[+b.closest('[data-opt]').dataset.opt];
     pickOpt(opt, opt.values[+b.dataset.i].set);
-  });
+  }));
   $('optreset')?.addEventListener('click', () => {
     ui.opts = {};
     if (card) card.setConfig(structuredClone(config()));
