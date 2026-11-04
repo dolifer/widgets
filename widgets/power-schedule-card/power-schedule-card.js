@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.4.1';
+  const VERSION = '1.5.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -313,6 +313,8 @@
       const BLOCK = 46, EDGE = 10, NEAR = 6;
       // split: rise (low at the left, high at the right), fall (the mirror
       // image) or straight. The rooms above and below stay the same.
+      // gradient: blend, soft or corners; true (1.3/1.4) means soft.
+      const grad = c.gradient === true ? 'soft' : ['blend', 'soft', 'corners'].includes(c.gradient) ? c.gradient : null;
       const split = ['rise', 'fall', 'straight'].includes(c.split) ? c.split : 'rise';
       const mid = Math.round((seamL + seamR) / 2);
       const [sl, sr] = split === 'fall' ? [seamR, seamL] : split === 'straight' ? [mid, mid] : [seamL, seamR];
@@ -326,7 +328,7 @@
       // Side by side the halves are narrow, so it gets a row of its own.
       const title = `<strong>${esc(nowTitle)}</strong>`;
       const titleRow = horiz ? title : `<div class="ttl">${title}${why}</div>`;
-      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, seamIcon || seamNow ? 'si' : '', c.gradient ? 'g' : '']
+      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, seamIcon || seamNow ? 'si' : '', grad ? `g g-${grad}` : '']
         .filter(Boolean).join(' ');
       const geom = horiz ? `--seam-t:${st}%;--seam-b:${sb}%`
         : `--seam-l:${sl}px;--seam-r:${sr}px;--pt:${padTop}px;--pb:${padBottom}px`;
@@ -339,7 +341,7 @@
             ${nextHtml}
           </div>
         </ha-card>`;
-      if (c.gradient) this._angle(horiz, height, sl, sr, st, sb);
+      if (grad) this._angle(horiz, height, sl, sr, st, sb);
       this.shadowRoot.querySelectorAll('[data-more]').forEach((el) => {
         el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info',
           { detail: { entityId: el.dataset.more }, bubbles: true, composed: true })));
@@ -368,12 +370,18 @@
     .next { align-items:flex-end; padding-bottom:var(--pb, 10px); gap:10px;
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
-    /* gradient: each half fades from its outer edge (34%) to faint (6%) at
-       the seam, as before, but square to the seam (--ga, set from the card's
-       size) so the fade follows the diagonal. The edge stays crisp. */
-    .g { --ga:180deg; background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 34%, transparent), color-mix(in srgb, var(--tint) 6%, transparent) 50%), var(--bg) }
+    /* gradient: one wash over the whole card, square to the split (--ga, set
+       from the card's size). blend: one colour runs smoothly into the other.
+       soft: each fades a little toward the split, which stays crisp.
+       corners: each colour glows from its own corner over a dark card. */
+    .g { --ga:180deg }
     .g.h { --ga:90deg }
-    .g .next { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 6%, transparent) 50%, color-mix(in srgb, var(--tint) 34%, transparent)), var(--bg) }
+    .g .next { background:none }
+    .g-blend { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 40%, transparent) 0%, color-mix(in srgb, var(--tint2) 40%, transparent) 100%), var(--bg) }
+    .g-soft { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 36%, transparent) 0%, color-mix(in srgb, var(--tint) 22%, transparent) 50%, color-mix(in srgb, var(--tint2) 22%, transparent) 50%, color-mix(in srgb, var(--tint2) 36%, transparent) 100%), var(--bg) }
+    .g-corners { background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--tint) 46%, transparent), transparent 60%),
+      radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--tint2) 46%, transparent), transparent 60%),
+      linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 12%, transparent) 50%, color-mix(in srgb, var(--tint2) 12%, transparent) 50%), var(--bg) }
     .txt, .nx { min-width:0 }
     .why { margin-left:auto; flex:none; align-self:flex-start; font-size:13px; line-height:20px; white-space:nowrap; color:var(--secondary-text-color) }
     .nx { flex:1 }

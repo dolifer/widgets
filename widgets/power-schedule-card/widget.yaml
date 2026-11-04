@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.4.1
+version: 1.5.0
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -23,7 +23,7 @@ preview:
         - { label: None, set: { show_now_icon: false, show_next_icon: false } }
     - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next }, { value: now, label: Now }, { value: none, label: None }] }
     - { key: split, label: Split, default: rise, values: [{ value: rise, label: ╱ Rise }, { value: fall, label: ╲ Fall }, { value: straight, label: ― Straight }] }
-    - { key: gradient, label: Gradient, default: false, values: [false, true] }
+    - { key: gradient, label: Gradient, default: false, values: [{ value: false, label: Off }, { value: blend, label: Blend }, { value: soft, label: Soft }, { value: corners, label: Corners }] }
 config:
   entity: binary_sensor.grid
   next_outage: sensor.next_outage
@@ -387,7 +387,7 @@ states:
     config:
       split: straight
       layout: horizontal
-      gradient: true
+      gradient: soft
     entities:
       binary_sensor.grid: { state: "off", changed: now-30m }
       sensor.next_outage: unknown
@@ -427,10 +427,10 @@ states:
       sensor.next_restore: unknown
 
   - id: gradient
-    title: Gradient tint (gradient true)
-    description: Each half fades from its outer edge toward the seam instead of a flat tint.
+    title: Gradient (gradient blend)
+    description: One colour runs smoothly into the other across the card.
     config:
-      gradient: true
+      gradient: blend
     entities:
       binary_sensor.grid: { state: "on", changed: now-1h04m }
       sensor.next_outage: now+1h40m
@@ -447,7 +447,7 @@ states:
   - id: gradient-horizontal
     title: Gradient, side by side, centred icon
     config:
-      gradient: true
+      gradient: corners
       layout: horizontal
       seam_icon: next
     entities:
