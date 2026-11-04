@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.5.2';
+  const VERSION = '1.6.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -32,6 +32,7 @@
       no_schedule: 'Schedule unavailable', unknown: 'No schedule data',
       outage_unknown: 'Next outage unknown',
       reason_planned: 'scheduled', reason_emergency: 'emergency', reason_unscheduled: 'unscheduled', reason_unknown: 'reason unknown',
+      at: 'at {d}', tomorrow: 'tomorrow',
       h: 'h', min: 'min',
     },
     uk: {
@@ -43,6 +44,7 @@
       no_schedule: 'Графік недоступний', unknown: 'Немає даних графіка',
       outage_unknown: 'Наступне відключення невідоме',
       reason_planned: 'за графіком', reason_emergency: 'екстрене', reason_unscheduled: 'поза графіком', reason_unknown: 'причина невідома',
+      at: 'о {d}', tomorrow: 'завтра',
       h: 'г', min: 'хв',
     },
   };
@@ -138,10 +140,15 @@
     disconnectedCallback() { clearInterval(this._timer); this._ro?.disconnect(); }
 
     // ── reading the config ───────────────────────────────────────────────────
+    _lang() {
+      const c = this.config;
+      const lang = String(c.language === 'auto' ? (this._hass?.locale?.language || this._hass?.language || 'en') : c.language).slice(0, 2);
+      return LANG[lang] ? lang : 'en';
+    }
+
     _t(key, d) {
       const c = this.config;
-      const lang = c.language === 'auto' ? (this._hass?.locale?.language || this._hass?.language || 'en') : c.language;
-      const base = LANG[String(lang).slice(0, 2)] || LANG.en;
+      const base = LANG[this._lang()];
       const s = (c.labels && c.labels[key] != null ? c.labels[key] : base[key]) ?? key;
       return d == null ? s : s.replace('{d}', d);
     }
@@ -286,12 +293,24 @@
         const nextColor = this._color(next.kind === 'outage' && outKey ? outKey : k.color);
         nextTint = nextColor;
         let sub = k.sub ? this._t(k.sub) : '';
-        let when = '';
+        // time_style: big (the time on its own, a date in front on another
+        // day), day (a day word on the label row, the time under it) or inline
+        // (no time box: the time leads the countdown line).
+        const style = ['day', 'inline'].includes(c.time_style) ? c.time_style : 'big';
+        let when = '', subAt = '';
         if (k.timed && next.at) {
           const left = next.at - now;
           if (!k.sub) sub = left > 0 ? this._t('in', this._dur(left)) : this._t('soon');
-          when = startOfDay(next.at) === startOfDay(new Date(now)) ? hhmm(next.at)
-            : `${pad(next.at.getDate())}.${pad(next.at.getMonth() + 1)} ${hhmm(next.at)}`;
+          const days = Math.round((startOfDay(next.at) - startOfDay(new Date(now))) / 864e5);
+          const date = `${pad(next.at.getDate())}.${pad(next.at.getMonth() + 1)}`;
+          const word = days === 0 ? '' : days === 1 ? this._t('tomorrow')
+            : days > 1 && days < 7 ? next.at.toLocaleDateString(this._lang(), { weekday: 'short' }) : date;
+          const t = hhmm(next.at);
+          if (style === 'inline') subAt = `${word ? `${word} ` : ''}${this._t('at', t)}`;
+          else {
+            const top = style === 'day' ? word : days ? date : '';
+            when = `<div class="when ws-${style}"><span class="wd">${esc(top)}</span><span class="wt">${esc(t)}</span></div>`;
+          }
         }
         const nextIcon = c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24);
         nextHtml = `
@@ -299,8 +318,8 @@
           <div class="next a-${nextAlign} v-${nextValign}${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
             ${horiz ? '' : nextIcon}
             <div class="nx">${horiz ? `<div class="lr">${nextIcon}<span class="lbl">${esc(this._t('next'))}</span></div>` : `<span class="lbl">${esc(this._t('next'))}</span>`}
-              <strong>${esc(this._t(k.label || next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
-            ${when ? `<div class="when">${esc(when)}</div>` : ''}
+              <strong>${esc(this._t(k.label || next.kind))}</strong><span class="sub">${subAt ? `<span>${esc(subAt)}</span><i> · </i><span>${esc(sub)}</span>` : esc(sub)}</span></div>
+            ${when}
           </div>`;
       }
 
@@ -401,8 +420,16 @@
     strong { display:block; font-weight:500; font-size:16px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
     .next strong { font-size:14px; line-height:18px }
     .sub { display:block; color:var(--secondary-text-color); font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .when { margin-left:auto; font-size:22px; line-height:26px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
-    .split:not(.h) .when { font-size:26px; line-height:30px }
+    /* The time: a day (or date) on the label row, the time across the two
+       rows under it, so it lines up with the label, title and countdown. */
+    .when { margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; font-weight:500; white-space:nowrap; text-align:right }
+    .when .wd { min-height:14px; font-size:10px; line-height:14px; font-weight:400; letter-spacing:.08em; text-transform:uppercase; color:var(--secondary-text-color) }
+    .when .wt { font-size:30px; line-height:34px; font-variant-numeric:tabular-nums }
+    .h .when { align-items:flex-start }
+    .h .when .wd:empty { display:none }
+    .sub i { font-style:normal }
+    .h .sub > span { display:block }
+    .h .sub i { display:none }   /* side by side, "at 20:00" and the countdown take a line each */
     .ttl { display:flex; align-items:baseline; gap:8px; min-width:0; height:20px }
     .ttl strong { min-width:0 }
     .ttl .why { margin:0; align-self:baseline; line-height:16px }
@@ -433,10 +460,10 @@
     .h .next .when { align-self:flex-start; margin:4px 0 0 }
     .h .a-center { text-align:center }
     .h .a-center .lr { justify-content:center }
-    .h .a-center .why, .h .a-center .when { align-self:center }
+    .h .a-center .why, .h .a-center .when { align-self:center; align-items:center }
     .h .a-right { text-align:right }
     .h .a-right .lr { justify-content:flex-end }
-    .h .a-right .why, .h .a-right .when { align-self:flex-end }
+    .h .a-right .why, .h .a-right .when { align-self:flex-end; align-items:flex-end }
     .h .v-center { justify-content:center }
     .h .v-bottom { justify-content:flex-end }
     .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - var(--sz) / 2); top:calc(50% - var(--sz) / 2) }

@@ -99,10 +99,11 @@ template:
 | `align` | `left` | Where the "now" text sits across its half: `left`, `center` or `right`. The "next" text mirrors it (left ↔ right) so the two balance across the card |
 | `valign` | `top` | Where the "now" text sits up and down its half: `top`, `center` or `bottom`. The "next" text mirrors it (top ↔ bottom) |
 | `seam_icon` | `arrow` | The centre circle: `arrow`, `next` or `now` (that half's icon moves into the circle and the half drops its own), or `none` for no circle |
+| `time_style` | `big` | How the next time shows: `big` (the time, with the date on the label row on another day), `day` ("tomorrow" or a weekday on the label row, the time under it) or `inline` (no time box: "at 20:00 · in 1 h 40 min") |
 | `split` | `rise` | The line between the halves: `rise` (diagonal, low on the left), `fall` (the other diagonal) or `straight` |
 | `gradient` | `false` | A wash over the whole card, square to the split: `blend` (one colour runs into the other), `soft` (a light fade, crisp split) or `corners` (each colour glows from its corner) |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
-| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
+| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `at`, `tomorrow`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
 | `colors` | — | `on`, `off`, `warn`, `unknown`: any CSS colour |
 | `outage_color` | `mixed` | `red` or `orange`: paint every outage in one colour, both "no power" now and the coming outage. `mixed`: no power is red, the coming outage orange |
 | `show_now_icon` | `true` | Icon in the top half (power now) |
