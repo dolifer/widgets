@@ -14,10 +14,13 @@ widgets/<id>/
   <id>.js          the card: one file, no build step
   widget.yaml      name, version, and the states the preview plays
   README.md        install and options, shipped in the release zip
+  render-check.js  optional: layout rules the render test checks (see below)
+  i18n.yaml        the preview page's text from widget.yaml, per language (see below)
 schema/widget.schema.yaml   what widget.yaml may hold
 tools/build.mjs             validate + generate dist/ (the Pages site)
 tools/release.mjs           pack one widget for a release
 tools/preview/              the preview runtime: fake clock, <ha-card>, themes
+tools/preview/i18n.mjs      the preview site's own text, per language
 tests/                      node tests; render.mjs drives a real browser
 ```
 
@@ -30,6 +33,7 @@ npm test                 # node tests
 npm run build            # dist/
 npm run serve            # http://localhost:8080 after a build
 npm run test:render      # every state in Chromium (needs Playwright; skips without)
+npm run test:render -- --coverage   # also: how much of each card the renders ran, and the lines never run
 ```
 
 ## States in widget.yaml
@@ -43,6 +47,7 @@ a timestamp sensor holds; inside a longer string write `{now+2h}`.
 states:
   - id: on-outage-next
     title: Power on, outage at 20:00
+    label: Planned day          # short name on the state toggle (≤16 chars, default: title)
     entities:
       binary_sensor.grid: { state: "on", changed: now-1h04m }
       sensor.next_outage: now+1h40m
@@ -55,7 +60,63 @@ states:
 ```
 
 `preview.clock: "18:20"` starts every run at the same wall time, so the
-pages look the same each day. The schema has the rest.
+pages look the same each day. `preview.languages` lists the languages the
+card speaks; the preview offers only those. The schema has the rest.
+
+`preview.options` lists card options the preview offers as chips (layout,
+align, gradient, …). A pick overrides that key in every state's config, goes
+into the URL (`o.align=center`) and shows in the config panel:
+
+```yaml
+preview:
+  options:
+    - { key: align, label: Align, default: left, values: [left, center, right] }
+    - { key: gradient, label: Gradient, default: false, values: [false, true] }
+```
+
+## Page language
+
+The language picker in the header switches the card and the whole page. The
+page's own text (buttons, clock, panels) is in `tools/preview/i18n.mjs`; text
+that comes from widget.yaml (name, options, state titles, event notes) is in
+the widget's `i18n.yaml`, keyed by the English:
+
+```yaml
+uk:
+  Power schedule: Графік світла
+  Planned day: Плановий день
+```
+
+`npm run check` fails when a language in `preview.languages` misses a text, or
+a key matches no text any more. The theme picker sets the page's theme too.
+
+## Layout checks
+
+States are situations only: what the sensors say and how that changes. Looks
+are not states; they are `preview.options`, picked with chips. The render
+test puts every state through them anyway: each option value on its own,
+every combination of `test.matrix`, and each config in `test.configs`
+(passed to the page as `?cfg=<json>`):
+
+```yaml
+test:
+  matrix: [layout, align, valign]
+  configs:
+    - { height: 130 }
+```
+
+`npm run test:render` opens every state, at the start and at each timeline
+event, at phone width (320 px) and the widget's own width, in every declared
+language. If `widgets/<id>/render-check.js` exists, it runs after each render:
+a function of the card element that returns problems as strings (text
+crossing a seam, text cut off, …). Any problem fails the run.
+
+A state or timeline event may list `expect:` text the card must show at that
+point, in the state's language; a leading `!` means it must not appear:
+
+```yaml
+    expect: [Немає світла, за графіком, "!Відключень не заплановано"]
+```
 
 ## Releases
 

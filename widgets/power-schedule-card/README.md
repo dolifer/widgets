@@ -34,6 +34,11 @@ When you replace the file with a newer version, bump `?v=1` to `?v=2`, or browse
 
   Without either, the card shows only the "now" half.
 
+The two halves always agree with the power sensor, even when the schedule is out of step:
+
+- **Power off:** the top shows why, next to the title, with its icon: *scheduled* (the schedule has a restore time), *emergency*, *unscheduled* (nothing in the schedule explains it), or *reason unknown* (no schedule, or it is down). The bottom shows when it comes back, or "time unknown".
+- **Power on:** the bottom shows the next outage, "no outages planned", or "next outage unknown" when the schedule still talks about a restore.
+
 ## Examples
 
 Timestamp sensors:
@@ -58,6 +63,10 @@ labels:
   restore: Включення
 colors:
   warn: '#ff9800'
+show_next_icon: false
+icons:
+  power_on: mdi:home-lightning-bolt
+  outage: mdi:transmission-tower-off
 ```
 
 A template sensor that builds the combined form from two timestamp sensors (put it in `configuration.yaml`, adjust the entity ids):
@@ -86,9 +95,20 @@ template:
 | `attribute` | — | Read the time from this attribute of the timestamp sensors instead of their state |
 | `schedule` | — | One sensor with `kind\|ISO time`; wins over the two above |
 | `height` | `150` | Card height in px (130–400) |
+| `layout` | `stacked` | `stacked`: now on top, next below. `horizontal`: now on the left, next on the right |
+| `align` | `left` | Where the "now" text sits across its half: `left`, `center` or `right`. The "next" text mirrors it (left ↔ right) so the two balance across the card |
+| `valign` | `top` | Where the "now" text sits up and down its half: `top`, `center` or `bottom`. The "next" text mirrors it (top ↔ bottom) |
+| `seam_icon` | `arrow` | The centre circle: `arrow`, `next` or `now` (that half's icon moves into the circle and the half drops its own), or `none` for no circle |
+| `time_style` | `big` | How the next time shows: `big` (the time, with the date on the label row on another day), `day` ("tomorrow" or a weekday on the label row, the time under it) or `inline` (no time box: "at 20:00 · in 1 h 40 min") |
+| `split` | `rise` | The line between the halves: `rise` (diagonal, low on the left), `fall` (the other diagonal) or `straight` |
+| `gradient` | `false` | A wash over the whole card, square to the split: `blend` (one colour runs into the other), `soft` (a light fade, crisp split) or `corners` (each colour glows from its corner) |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
-| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
+| `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `at`, `tomorrow`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |
 | `colors` | — | `on`, `off`, `warn`, `unknown`: any CSS colour |
+| `outage_color` | `red` | `red` or `orange`: the colour of every outage, both "no power" now and the coming outage |
+| `show_now_icon` | `true` | Icon in the top half (power now) |
+| `show_next_icon` | `true` | Icon in the bottom half (what comes next) |
+| `icons` | — | Replace any icon with an `mdi:` one. Keys: `power_on`, `power_off`, `power_unknown`, `power_planned`, `power_emergency`, `power_unscheduled` (top); `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `restore_unknown`, `outage_unknown` (bottom) |
 
 Tapping either half opens that entity's more-info dialog.
 

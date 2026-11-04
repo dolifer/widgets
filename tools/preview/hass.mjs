@@ -32,6 +32,39 @@ if (!customElements.get('ha-card')) {
   });
 }
 
+// ── <ha-icon> ────────────────────────────────────────────────────────────────
+// HA draws mdi: icons with <ha-icon icon="mdi:name">. The preview fetches the
+// same Material Design Icons SVG from jsDelivr; offline it leaves a blank box
+// of the right size, so layouts still measure the same.
+const MDI = 'https://cdn.jsdelivr.net/npm/@mdi/svg@7.4.47/svg/';
+const iconCache = new Map();
+if (!customElements.get('ha-icon')) {
+  customElements.define('ha-icon', class extends HTMLElement {
+    static get observedAttributes() { return ['icon']; }
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' }).innerHTML = `<style>
+        :host { display:inline-flex; width:var(--mdc-icon-size, 24px); height:var(--mdc-icon-size, 24px); color:inherit }
+        #i { display:contents }
+        svg { width:100%; height:100%; fill:currentColor }
+      </style><span id="i"></span>`;
+    }
+    connectedCallback() { this.draw(); }
+    attributeChangedCallback() { this.draw(); }
+    async draw() {
+      const name = (this.getAttribute('icon') || '').replace(/^mdi:/, '');
+      if (!/^[a-z0-9-]+$/.test(name)) return;
+      if (!iconCache.has(name)) {
+        iconCache.set(name, fetch(`${MDI}${name}.svg`).then((r) => (r.ok ? r.text() : '')).catch(() => ''));
+      }
+      const svg = await iconCache.get(name);
+      // Keep only the path data: the file is third-party, so no markup goes in as is.
+      const d = [...svg.matchAll(/\sd="([^"]+)"/g)].map((m) => m[1]).filter((x) => /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/.test(x));
+      this.shadowRoot.getElementById('i').innerHTML = d.length ? `<svg viewBox="0 0 24 24">${d.map((x) => `<path d="${x}"/>`).join('')}</svg>` : '';
+    }
+  });
+}
+
 // ── themes ───────────────────────────────────────────────────────────────────
 // The default HA theme's main variables, dark and light.
 export const THEMES = {

@@ -4,7 +4,8 @@ name: Release
 #   git tag power-schedule-card-v1.0.1 && git push origin power-schedule-card-v1.0.1
 # The tag's version must equal that widget's widget.yaml (and the script's
 # VERSION, which the build checks). The release carries
-# <widget>-<version>.zip: the card JS, its README and a hacs.json.
+# <widget>-<version>.zip: the card JS, its README and a hacs.json. A version
+# with a pre-release part (1.0.0-beta.1) makes a draft pre-release.
 on:
   push:
     tags: ['*-v[0-9]*']
@@ -47,4 +48,8 @@ jobs:
               echo "First release."
             fi
           } > notes.md
-          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file notes.md --verify-tag
+          # A pre-release version (1.0.0-beta.1) becomes a draft pre-release,
+          # published by hand once it has been tried.
+          flags=()
+          case "${TAG##*-v}" in *-*) flags=(--prerelease --draft) ;; esac
+          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file notes.md --verify-tag "${flags[@]}"

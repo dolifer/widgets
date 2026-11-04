@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv from 'ajv';
-import { loadWidgets, checkWidget, loadSchema, build } from '../tools/build.mjs';
+import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants, widgetStrings, checkI18n } from '../tools/build.mjs';
+import { PAGE, translator } from '../tools/preview/i18n.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
 import { parseTag, pack, zip } from '../tools/release.mjs';
 
@@ -97,6 +98,8 @@ test('the checks catch the usual mistakes', () => {
     [(w) => { w.states[0].entities = { 'Not An Id': 1 }; }, /property name|propertyNames|must match pattern/],
     [(w) => { w.script = 'missing.js'; }, /not in/],
     [(w) => { w.states[0].colour = 'x'; }, /additional properties/],
+    [(w) => { w.states[0].language = 'de'; }, /not in preview\.languages/],
+    [(w) => { w.preview = { languages: ['uk'] }; }, /language en is not in/],
   ];
   for (const [breakIt, re] of cases) {
     const w = good(); breakIt(w);
@@ -133,6 +136,19 @@ test('pack refuses a tag whose version is not the widget’s', () => {
   assert.throws(() => pack('nope-v1.0.0'), /no widget/);
 });
 
+test('pack writes the card, its README and hacs.json for the widget\'s own version', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'widgets-'));
+  fs.cpSync(path.join(import.meta.dirname, '..', 'schema'), path.join(root, 'schema'), { recursive: true });
+  fs.cpSync(path.join(import.meta.dirname, '..', 'widgets'), path.join(root, 'widgets'), { recursive: true });
+  const w = loadWidgets(root).widgets[0];
+  const r = pack(`${w.id}-v${w.version}`, root);
+  assert.equal(r.out, path.join(root, 'release', `${w.id}-${w.version}.zip`));
+  assert.deepEqual(r.files, [w.script, 'README.md', 'hacs.json']);
+  const zipped = fs.readFileSync(r.out);
+  assert.ok(zipped.includes(Buffer.from('hacs.json')));
+  assert.throws(() => pack('not a tag', root), /must look like/);
+});
+
 test('zip holds the files, readable back', () => {
   const buf = zip([['a.js', 'console.log(1)\n'], ['hacs.json', '{"zip_release":true}']]);
   assert.equal(buf.readUInt32LE(0), 0x04034b50);
@@ -143,4 +159,75 @@ test('zip holds the files, readable back', () => {
   const nameLen = buf.readUInt16LE(26), size = buf.readUInt32LE(18);
   assert.equal(buf.subarray(30, 30 + nameLen).toString(), 'a.js');
   assert.equal(zlib.inflateRawSync(buf.subarray(30 + nameLen, 30 + nameLen + size)).toString(), 'console.log(1)\n');
+});
+
+test('preview options: one key or a set of keys per chip', () => {
+  assert.deepEqual(previewOption({ key: 'gradient', label: 'Gradient', default: false, values: [false, true] }), {
+    label: 'Gradient', section: '', defaults: { gradient: false },
+    values: [{ label: 'Off', icon: '', set: { gradient: false } }, { label: 'On', icon: '', set: { gradient: true } }],
+  });
+  const iconed = previewOption({ section: 'Layout', key: 'align', values: [{ value: 'left', label: 'Left', icon: 'align-left' }] });
+  assert.deepEqual([iconed.section, iconed.values[0].icon], ['Layout', 'align-left']);
+  const icons = previewOption({ label: 'Icons', defaults: { a: true, b: true }, values: [{ label: 'Both', set: { a: true, b: true } }, { set: { a: false, b: false } }] });
+  assert.deepEqual(icons.values[0], { label: 'Both', icon: '', set: { a: true, b: true } });
+  assert.equal(icons.values[1].label, 'Off Off');
+  const w = good(); w.preview = { options: [{ label: 'X', values: ['a', 'b'] }] };
+  assert.ok(tmpWidget(w).errs.some((e) => /needs the option's key/.test(e)));
+  w.preview = { options: [{ key: 'x', values: [{ value: 'a', icon: 'no-such-icon' }, 'b'] }] };
+  assert.ok(tmpWidget(w).errs.some((e) => /no icon no-such-icon/.test(e)));
+});
+
+test('test variants: each option value alone, the matrix, then extra configs', () => {
+  const w = {
+    preview: { options: [{ key: 'a', default: 1, values: [1, 2] }, { key: 'b', default: 'x', values: ['x', 'y'] }] },
+    test: { matrix: ['a', 'b'], configs: [{ height: 200 }, { a: 2 }] },
+  };
+  assert.deepEqual(testVariants(w), [
+    { a: 2 }, { b: 'y' },
+    { a: 1, b: 'x' }, { a: 1, b: 'y' }, { a: 2, b: 'x' }, { a: 2, b: 'y' },
+    { height: 200 },
+  ]);
+  const bad = good(); bad.preview = { options: [{ key: 'a', values: [1, 2] }] }; bad.test = { matrix: ['zz'] };
+  assert.ok(tmpWidget(bad).errs.some((e) => /zz is not a preview option key/.test(e)));
+});
+
+test('widget translations: complete, no leftovers, only offered languages', () => {
+  const w = { ...good(), preview: { languages: ['en', 'uk'], options: [{ key: 'a', label: 'Size', values: ['big'] }] },
+    states: [{ id: 'one', title: 'One', label: 'Uno', entities: {}, timeline: [{ at: 'now+1h', note: 'Later' }] }] };
+  assert.deepEqual(widgetStrings(w), ['X', 'Size', 'Big', 'One', 'Uno', 'Later']);
+  const full = { uk: Object.fromEntries(widgetStrings(w).map((x) => [x, `uk ${x}`])) };
+  assert.deepEqual(checkI18n(w, full), []);
+  const { Later, ...short } = full.uk;
+  assert.match(checkI18n(w, { uk: short }).join('\n'), /no translation for "Later"/);
+  assert.match(checkI18n(w, { uk: { ...full.uk, Gone: 'x' } }).join('\n'), /"Gone", which the widget no longer shows/);
+  assert.match(checkI18n(w, { ...full, de: {} }).join('\n'), /de is not in preview.languages/);
+  assert.match(checkI18n(w, {}).join('\n'), /uk has no translation/);
+});
+
+test('page text: every t() in the page scripts has each translation', () => {
+  const used = new Set();
+  for (const f of ['preview.mjs', 'gallery.mjs']) {
+    const src = fs.readFileSync(new URL(`../tools/preview/${f}`, import.meta.url), 'utf8');
+    for (const m of src.matchAll(/\b(?:t|page)\('((?:[^'\\]|\\.)*)'/g)) used.add(m[1]);
+  }
+  for (const l of ['Phone', 'Card', 'Wide']) used.add(l);   // passed as variables
+  assert.ok(used.size > 20);
+  for (const [lang, d] of Object.entries(PAGE)) {
+    assert.deepEqual([...used].filter((k) => !(k in d)), [], `${lang} misses page text`);
+  }
+  const t = translator('uk', { uk: { Size: 'Розмір' } });
+  assert.equal(t('Size'), 'Розмір');
+  assert.equal(t('{m} min', { m: 5 }), '5 хв');
+  assert.equal(t('Unknown text'), 'Unknown text');
+});
+
+test('time fields: tokens, ISO times, and the clock with no HH:MM', async () => {
+  const { isTimeToken, timeOf } = await import('../tools/preview/scenario.mjs');
+  assert.ok(isTimeToken('now + 2h'));
+  assert.ok(!isTimeToken('tomorrow'));
+  assert.equal(timeOf('now+1h', 1000), 1000 + H);
+  assert.equal(timeOf('2026-01-01T00:00:00Z', 0), Date.parse('2026-01-01T00:00:00Z'));
+  assert.equal(timeOf('soon', 0), null);
+  const t = startTime(undefined, Date.parse('2026-01-01T10:20:35.500Z'));
+  assert.equal(t, Date.parse('2026-01-01T10:20:00Z'));
 });
