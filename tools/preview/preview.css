@@ -64,7 +64,10 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .center { min-width: 0; display: flex; flex-direction: column; gap: 12px }
 /* Wide screens: the options flank the card, half on each side. */
 @media (min-width: 1100px) {
-  .studio { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; align-items: start; gap: 20px }
+  /* The options hug the card's box on both sides, the three centred as one. */
+  .studio { display: grid; grid-template-columns: max-content minmax(0, max-content) max-content; justify-content: center; align-items: start; gap: 16px }
+  .studio .center { align-items: center }
+  .studio .stage { min-width: 380px }
   .studio .opts { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 0; padding-top: 2px; min-width: 150px }
   .studio .sec { display: flex; flex-direction: column; align-items: flex-start; gap: 6px }
   .studio .sec h4 { margin: 0 }
