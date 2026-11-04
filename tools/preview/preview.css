@@ -69,12 +69,17 @@ select { font: inherit; color: var(--text); background: var(--panel); border: 1p
 .frame { max-width: 100%; transition: width .2s }
 .err { color: #e2554a; font: 13px ui-monospace, monospace; padding: 12px; border: 1px dashed currentColor; border-radius: 8px }
 
-.clock { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px }
+/* One block for the state: pick it, read it, jump to its events, then play the clock. */
+.player { display: flex; flex-direction: column; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px }
+.player .desc { margin: 0 4px; font-size: 13px }
+.player .events { margin: 0 2px }
+.clock { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding: 10px 2px 0 }
+.reset { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--chip); color: var(--text); font-size: 17px; flex: none }
 .play { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 13px }
-.time { display: flex; flex-direction: column; min-width: 92px; line-height: 1.2 }
+.time { display: flex; flex-direction: column; min-width: 76px; line-height: 1.2; flex: none }
 .time b { font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums }
 .time span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums }
-.clock input[type=range] { flex: 1; min-width: 160px; accent-color: var(--accent) }
+.clock input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent) }
 
 .events { display: flex; flex-wrap: wrap; gap: 6px }
 .events button { all: unset; cursor: pointer; padding: 5px 10px; border-radius: 999px; background: var(--chip); font-size: 12px; display: inline-flex; gap: 6px }

@@ -108,17 +108,19 @@ function layout() {
           <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button>
         </div>` : ''}
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
-        <nav class="states" aria-label="${esc(t('States'))}" style="--cols:${Math.ceil(W.states.length / 2)}">
-          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(t(s.title))}">${esc(t(s.label))}</button>`).join('')}
-        </nav>
-        <div class="clock">
-          <button class="play" id="play" aria-label="${esc(t('Play'))}">▶</button>
-          <div class="time"><b id="now">--:--</b><span id="offset"></span></div>
-          <input type="range" id="slider" min="0" step="60000" aria-label="${esc(t('Preview clock'))}">
-          <button class="btn ghost" id="reset">${esc(t('Reset'))}</button>
-        </div>
-        <p class="desc" id="desc"></p>
-        <div class="events" id="events"></div>
+        <section class="player">
+          <nav class="states" aria-label="${esc(t('States'))}" style="--cols:${Math.ceil(W.states.length / 2)}">
+            ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(t(s.title))}">${esc(t(s.label))}</button>`).join('')}
+          </nav>
+          <p class="desc" id="desc"></p>
+          <div class="events" id="events"></div>
+          <div class="clock">
+            <button class="play" id="play" aria-label="${esc(t('Play'))}">▶</button>
+            <div class="time"><b id="now">--:--</b><span id="offset"></span></div>
+            <input type="range" id="slider" min="0" step="60000" aria-label="${esc(t('Preview clock'))}">
+            <button class="reset" id="reset" title="${esc(t('Reset'))}" aria-label="${esc(t('Reset'))}">↺</button>
+          </div>
+        </section>
         <div class="panels">
           <div class="panel"><div class="ph"><h3>${esc(t('Card config'))}</h3><button class="btn ghost" id="copy">${esc(t('Copy'))}</button></div><pre id="yaml"></pre></div>
           <div class="panel"><div class="ph"><h3>${esc(t('Entities now'))}</h3></div><table id="ents"></table></div>
