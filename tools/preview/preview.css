@@ -4,10 +4,14 @@
   --accent: #2f6fde; --accent-soft: rgba(47,111,222,.1); --chip: #eef0f4;
   color-scheme: light dark;
 }
+/* Dark from the system, unless the theme picker chose; the picker sets data-theme. */
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0e1013; --panel: #171a1f; --text: #e6e8ec; --muted: #949aa6; --line: #2a2f37;
-    --accent: #6a9cff; --accent-soft: rgba(106,156,255,.14); --chip: #22262d; }
+  :root:not([data-theme="light"]) { --bg: #0e1013; --panel: #171a1f; --text: #e6e8ec; --muted: #949aa6; --line: #2a2f37;
+    --accent: #6a9cff; --accent-soft: rgba(106,156,255,.14); --chip: #22262d; color-scheme: dark; }
 }
+:root[data-theme="dark"] { --bg: #0e1013; --panel: #171a1f; --text: #e6e8ec; --muted: #949aa6; --line: #2a2f37;
+  --accent: #6a9cff; --accent-soft: rgba(106,156,255,.14); --chip: #22262d; color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light }
 * { box-sizing: border-box }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, system-ui, -apple-system, sans-serif }
 a { color: var(--accent) }
@@ -20,7 +24,9 @@ p { margin: 2px 0 0; color: var(--muted) }
 code, pre, table { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px }
 
 .top { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--panel) }
-.top > div { flex: 1; min-width: 0 }
+.top > div:not(.seg) { flex: 1; min-width: 0 }
+.top .seg button { padding: 4px 9px; font-size: 13px }
+.seg.icons button { font-size: 15px; line-height: 1.2 }
 .back { text-decoration: none; font-size: 20px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--chip); color: var(--text) }
 
 .btn { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 500; font-size: 13px; white-space: nowrap }
@@ -101,7 +107,11 @@ body.embed .stage { border: 0; border-radius: 0; padding: 20px 16px }
   .states button { padding: 8px 4px; font-size: 12px }
   .top { padding: 12px 16px }
   .top p { display: none }
-  .top h1 { font-size: 17px }
+  .top { gap: 8px }
+  .top h1 { font-size: 16px }
+  .top .ver { display: none }
+  .top .btn { padding: 6px 10px }
+  .top .seg button { padding: 4px 7px }
   .wide-only { display: none }
   .gallery { padding: 16px }
 }

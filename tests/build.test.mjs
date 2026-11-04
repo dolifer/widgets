@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv from 'ajv';
-import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants } from '../tools/build.mjs';
+import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants, widgetStrings, checkI18n } from '../tools/build.mjs';
+import { PAGE, translator } from '../tools/preview/i18n.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
 import { parseTag, pack, zip } from '../tools/release.mjs';
 
@@ -171,4 +172,34 @@ test('test variants: each option value alone, the matrix, then extra configs', (
   ]);
   const bad = good(); bad.preview = { options: [{ key: 'a', values: [1, 2] }] }; bad.test = { matrix: ['zz'] };
   assert.ok(tmpWidget(bad).errs.some((e) => /zz is not a preview option key/.test(e)));
+});
+
+test('widget translations: complete, no leftovers, only offered languages', () => {
+  const w = { ...good(), preview: { languages: ['en', 'uk'], options: [{ key: 'a', label: 'Size', values: ['big'] }] },
+    states: [{ id: 'one', title: 'One', label: 'Uno', entities: {}, timeline: [{ at: 'now+1h', note: 'Later' }] }] };
+  assert.deepEqual(widgetStrings(w), ['X', 'Size', 'Big', 'One', 'Uno', 'Later']);
+  const full = { uk: Object.fromEntries(widgetStrings(w).map((x) => [x, `uk ${x}`])) };
+  assert.deepEqual(checkI18n(w, full), []);
+  const { Later, ...short } = full.uk;
+  assert.match(checkI18n(w, { uk: short }).join('\n'), /no translation for "Later"/);
+  assert.match(checkI18n(w, { uk: { ...full.uk, Gone: 'x' } }).join('\n'), /"Gone", which the widget no longer shows/);
+  assert.match(checkI18n(w, { ...full, de: {} }).join('\n'), /de is not in preview.languages/);
+  assert.match(checkI18n(w, {}).join('\n'), /uk has no translation/);
+});
+
+test('page text: every t() in the page scripts has each translation', () => {
+  const used = new Set();
+  for (const f of ['preview.mjs', 'gallery.mjs']) {
+    const src = fs.readFileSync(new URL(`../tools/preview/${f}`, import.meta.url), 'utf8');
+    for (const m of src.matchAll(/\b(?:t|page)\('((?:[^'\\]|\\.)*)'/g)) used.add(m[1]);
+  }
+  for (const l of ['Phone', 'Card', 'Wide']) used.add(l);   // passed as variables
+  assert.ok(used.size > 20);
+  for (const [lang, d] of Object.entries(PAGE)) {
+    assert.deepEqual([...used].filter((k) => !(k in d)), [], `${lang} misses page text`);
+  }
+  const t = translator('uk', { uk: { Size: 'Розмір' } });
+  assert.equal(t('Size'), 'Розмір');
+  assert.equal(t('{m} min', { m: 5 }), '5 хв');
+  assert.equal(t('Unknown text'), 'Unknown text');
 });

@@ -6,6 +6,7 @@
 //      ?embed=1 shows only the card (the gallery uses it).
 import { clock, applyTheme, makeHass, loadCard } from './hass.mjs';
 import { statesAt, startTime } from './scenario.mjs';
+import { translator, remembered } from './i18n.mjs';
 
 clock.install();
 
@@ -17,11 +18,12 @@ const embed = q.has('embed');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad = (n) => String(n).padStart(2, '0');
 const hhmm = (t) => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const fmtOff = (ms) => {
-  const m = Math.round(Math.abs(ms) / 6e4), s = ms < 0 ? '−' : '+';
-  return m < 60 ? `${s}${m} min` : `${s}${Math.floor(m / 60)} h ${pad(m % 60)} min`;
-};
-const ago = (ms) => { const m = Math.round(ms / 6e4); return m < 60 ? `${m} min` : m < 2880 ? `${Math.floor(m / 60)} h ${pad(m % 60)} min` : `${Math.round(m / 1440)} d`; };
+// The page speaks the picked language: t() looks in tools/preview/i18n.mjs,
+// then in the widget's i18n.yaml, then shows the English.
+let t = (x) => x, pageLang = null;
+const span = (m) => (m < 60 ? t('{m} min', { m }) : t('{h} h {m} min', { h: Math.floor(m / 60), m: pad(m % 60) }));
+const fmtOff = (ms) => `${ms < 0 ? '−' : '+'}${span(Math.round(Math.abs(ms) / 6e4))}`;
+const ago = (ms) => { const m = Math.round(ms / 6e4); return m < 2880 ? span(m) : t('{d} d', { d: Math.round(m / 1440) }); };
 
 // preview.options from widget.yaml: chips that override one config key.
 // A pick that equals what the state already uses clears the override.
@@ -65,6 +67,7 @@ const WIDTHS = [[320, 'Phone'], [W.width, 'Card'], [Math.max(600, W.width + 160)
   .filter(([w], i, a) => a.findIndex(([x]) => x === w) === i);
 // Only the languages the widget declares: the card has no text for any other.
 const langName = (code) => { try { const n = new Intl.DisplayNames([code], { type: 'language' }).of(code); return n.charAt(0).toLocaleUpperCase(code) + n.slice(1); } catch { return code; } };
+const langShort = (code) => langName(code).slice(0, 3);
 
 function layout() {
   if (embed) {
@@ -74,42 +77,42 @@ function layout() {
   }
   app.innerHTML = `
     <header class="top">
-      <a href="../" class="back" aria-label="All widgets">←</a>
-      <div><h1>${esc(W.name)} <span class="ver">v${esc(W.version)}</span></h1><p>${esc(W.description)}</p></div>
-      <a class="btn" href="${esc(W.script)}" download title="${esc(W.script)}">Download<span class="wide-only"> ${esc(W.script)}</span></a>
+      <a href="../" class="back" aria-label="${esc(t('All widgets'))}">←</a>
+      <div class="ttl"><h1>${esc(t(W.name))} <span class="ver">v${esc(W.version)}</span></h1><p>${esc(t(W.description))}</p></div>
+      <div class="seg icons" id="theme" role="group" aria-label="${esc(t('Theme'))}">
+        <button data-v="dark" title="${esc(t('Dark'))}" aria-label="${esc(t('Dark'))}">☾</button><button data-v="light" title="${esc(t('Light'))}" aria-label="${esc(t('Light'))}">☀</button></div>
+      ${W.languages.length > 1 ? `<div class="seg" id="lang" role="group" aria-label="${esc(t('Language'))}">
+        ${W.languages.map((c) => `<button data-v="${esc(c)}" lang="${esc(c)}" title="${esc(langName(c))}">${esc(langShort(c))}</button>`).join('')}</div>` : ''}
+      <a class="btn" href="${esc(W.script)}" download title="${esc(W.script)}" aria-label="${esc(t('Download'))}">↓<span class="wide-only"> ${esc(t('Download'))}</span></a>
     </header>
     <main class="layout">
       <section class="work">
         <div class="bar">
-          <div class="seg" id="theme" role="group" aria-label="Theme">
-            <button data-v="dark">Dark</button><button data-v="light">Light</button></div>
-          <div class="seg" id="width" role="group" aria-label="Width">
-            ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${l} <small>${w}</small></button>`).join('')}</div>
-          ${W.languages.length > 1 ? `<div class="seg" id="lang" role="group" aria-label="Language">
-            ${W.languages.map((c) => `<button data-v="${esc(c)}" lang="${esc(c)}">${esc(langName(c))}</button>`).join('')}</div>` : ''}
+          <div class="seg" id="width" role="group" aria-label="${esc(t('Width'))}">
+            ${WIDTHS.map(([w, l]) => `<button data-v="${w}">${esc(t(l))} <small>${w}</small></button>`).join('')}</div>
         </div>
         ${OPTS.length ? `<div class="bar opts" id="opts">
-          ${OPTS.map((o, i) => `<div class="grp"><span>${esc(o.label)}</span><div class="seg" role="group" aria-label="${esc(o.label)}" data-opt="${i}">
-            ${o.values.map((v, j) => `<button data-i="${j}">${esc(v.label)}</button>`).join('')}</div></div>`).join('')}
-          <button class="btn ghost" id="optreset" hidden>Reset options</button>
+          ${OPTS.map((o, i) => `<div class="grp"><span>${esc(t(o.label))}</span><div class="seg" role="group" aria-label="${esc(t(o.label))}" data-opt="${i}">
+            ${o.values.map((v, j) => `<button data-i="${j}">${esc(t(v.label))}</button>`).join('')}</div></div>`).join('')}
+          <button class="btn ghost" id="optreset" hidden>${esc(t('Reset options'))}</button>
         </div>` : ''}
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
-        <nav class="states" aria-label="States" style="--cols:${Math.ceil(W.states.length / 2)}">
-          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(s.title)}">${esc(s.label)}</button>`).join('')}
+        <nav class="states" aria-label="${esc(t('States'))}" style="--cols:${Math.ceil(W.states.length / 2)}">
+          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(t(s.title))}">${esc(t(s.label))}</button>`).join('')}
         </nav>
         <div class="clock">
-          <button class="play" id="play" aria-label="Play">▶</button>
+          <button class="play" id="play" aria-label="${esc(t('Play'))}">▶</button>
           <div class="time"><b id="now">--:--</b><span id="offset"></span></div>
-          <input type="range" id="slider" min="0" step="60000" aria-label="Preview clock">
-          <label class="sel">Speed <select id="speed">
-            <option value="10">10 min/s</option><option value="60" selected>1 h/s</option><option value="360">6 h/s</option></select></label>
-          <button class="btn ghost" id="reset">Reset</button>
+          <input type="range" id="slider" min="0" step="60000" aria-label="${esc(t('Preview clock'))}">
+          <label class="sel">${esc(t('Speed'))} <select id="speed">
+            ${[[10, t('{n} min/s', { n: 10 })], [60, t('{n} h/s', { n: 1 })], [360, t('{n} h/s', { n: 6 })]].map(([v, l]) => `<option value="${v}"${v === ui.speed ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+          <button class="btn ghost" id="reset">${esc(t('Reset'))}</button>
         </div>
         <p class="desc" id="desc"></p>
         <div class="events" id="events"></div>
         <div class="panels">
-          <div class="panel"><div class="ph"><h3>Card config</h3><button class="btn ghost" id="copy">Copy</button></div><pre id="yaml"></pre></div>
-          <div class="panel"><div class="ph"><h3>Entities now</h3></div><table id="ents"></table></div>
+          <div class="panel"><div class="ph"><h3>${esc(t('Card config'))}</h3><button class="btn ghost" id="copy">${esc(t('Copy'))}</button></div><pre id="yaml"></pre></div>
+          <div class="panel"><div class="ph"><h3>${esc(t('Entities now'))}</h3></div><table id="ents"></table></div>
         </div>
         <div class="log" id="log" aria-live="polite"></div>
       </section>
@@ -128,6 +131,12 @@ function log(msg) {
 
 async function selectState(st) {
   ui.state = st;
+  if (lang() !== pageLang) {
+    pageLang = lang(); t = translator(pageLang, W.i18n);
+    document.documentElement.lang = pageLang;
+    layout(); if (!embed) bind();
+  }
+  document.title = `${t(W.name)} · ${t(st.title)}`;
   t0 = startTime(st.clock, clock.realNow());
   ui.off = Math.min(Math.max(0, ui.off), st.span);
   const frame = $('frame');
@@ -144,12 +153,12 @@ async function selectState(st) {
   }
   if (!embed) {
     document.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.state === st.id));
-    $('desc').innerHTML = `<b>${esc(st.title)}</b>${st.description ? ` · ${esc(st.description)}` : ''}`;
+    $('desc').innerHTML = `<b>${esc(t(st.title))}</b>${st.description ? ` · ${esc(t(st.description))}` : ''}`;
     showOpts();
     $('slider').max = st.span;
     $('events').innerHTML = st.timeline.length
-      ? `<button data-at="0"><b>${hhmm(t0)}</b>Start</button>` + st.timeline.map((e) => `<button data-at="${e.off}"><b>${hhmm(t0 + e.off)}</b>${esc(e.note || e.at)}</button>`).join('')
-      : '<span class="muted">No timeline in this state: move the clock to watch countdowns tick.</span>';
+      ? `<button data-at="0"><b>${hhmm(t0)}</b>${esc(t('Start'))}</button>` + st.timeline.map((e) => `<button data-at="${e.off}"><b>${hhmm(t0 + e.off)}</b>${esc(e.note ? t(e.note) : e.at)}</button>`).join('')
+      : `<span class="muted">${esc(t('No timeline in this state: move the clock to watch countdowns tick.'))}</span>`;
   }
   update(true);
 }
@@ -180,28 +189,31 @@ function pickOpt(opt, set) {
 // set only when picked, and the URL is written once playing stops.
 const last = {};
 function update(force = false) {
-  const t = t0 + ui.off;
-  const minute = Math.floor(t / 6e4);
-  clock.set(t);
+  const at = t0 + ui.off;
+  const minute = Math.floor(at / 6e4);
+  clock.set(at);
   const th = theme();
-  if (force || last.theme !== th) { applyTheme($('stage'), th); last.theme = th; }
+  if (force || last.theme !== th) {
+    applyTheme($('stage'), th); last.theme = th;
+    if (!embed) document.documentElement.dataset.theme = th;   // the page follows the card's theme
+  }
   if (force || last.width !== ui.width) { $('frame').style.width = `${ui.width}px`; last.width = ui.width; }
   const key = `${ui.state.id}|${minute}|${lang()}|${th}`;
   let states = last.states;
   if (force || last.key !== key) {
     last.key = key;
-    states = last.states = statesAt(ui.state, t0, t);
+    states = last.states = statesAt(ui.state, t0, at);
     if (card) {
       try { card.hass = makeHass({ states, language: lang(), theme: th, onService: (s, d) => log(`service ${s} ${JSON.stringify(d || {})}`) }); }
       catch (e) { $('frame').innerHTML = `<div class="err">${esc(e.message)}</div>`; card = null; }
     }
   }
   if (embed) return;
-  $('now').textContent = hhmm(t);
-  $('offset').textContent = ui.off ? fmtOff(ui.off) : 'start';
+  $('now').textContent = hhmm(at);
+  $('offset').textContent = ui.off ? fmtOff(ui.off) : t('start');
   $('slider').value = ui.off;
   $('play').textContent = ui.playing ? '❚❚' : '▶';
-  $('play').setAttribute('aria-label', ui.playing ? 'Pause' : 'Play');
+  $('play').setAttribute('aria-label', ui.playing ? t('Pause') : t('Play'));
   if (force || last.controls !== `${th}|${ui.width}|${lang()}`) {
     last.controls = `${th}|${ui.width}|${lang()}`;
     document.querySelectorAll('#theme button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === th));
@@ -212,7 +224,7 @@ function update(force = false) {
   if (force || last.entsMinute !== minute) {
     last.entsMinute = minute;
     $('ents').innerHTML = Object.values(states).map((s) =>
-      `<tr><td>${esc(s.entity_id)}</td><td><b>${esc(s.state)}</b></td><td class="muted">${esc(ago(t - Date.parse(s.last_changed)))}</td></tr>`).join('');
+      `<tr><td>${esc(s.entity_id)}</td><td><b>${esc(s.state)}</b></td><td class="muted">${esc(ago(at - Date.parse(s.last_changed)))}</td></tr>`).join('');
   }
   if (!ui.playing) writeUrl();
 }
@@ -247,9 +259,18 @@ function bind() {
     ui.off = 0; ui.playing = false;
     selectState(W.states.find((s) => s.id === b.dataset.state));
   });
-  $('theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.theme = b.dataset.v === ui.state.theme ? null : b.dataset.v; update(); } });
+  $('theme').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    ui.theme = b.dataset.v === ui.state.theme ? null : b.dataset.v; remembered.set('theme', b.dataset.v); update();
+  });
   $('width').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.width = +b.dataset.v; update(); } });
-  $('lang')?.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.lang = b.dataset.v === ui.state.language ? null : b.dataset.v; update(); } });
+  // A new language lays the page out again in it, card included.
+  $('lang')?.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    ui.lang = b.dataset.v === ui.state.language ? null : b.dataset.v; remembered.set('lang', b.dataset.v);
+    ui.playing = false; cancelAnimationFrame(raf);
+    selectState(ui.state);
+  });
   $('opts')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-i]'); if (!b) return;
     const opt = OPTS[+b.closest('[data-opt]').dataset.opt];
@@ -272,15 +293,12 @@ function bind() {
   });
   $('events').addEventListener('click', (e) => { const b = e.target.closest('[data-at]'); if (b) { ui.off = +b.dataset.at; update(); } });
   $('copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('yaml').textContent); log('config copied'); } catch { log('copy failed: select the text instead'); }
+    try { await navigator.clipboard.writeText($('yaml').textContent); log(t('config copied')); } catch { log(t('copy failed: select the text instead')); }
   });
 }
 
-layout();
-if (!embed) bind();
-else if (parent !== window) {
+selectState(ui.state);   // lays the page out first, in the state's language
+if (embed && parent !== window) {
   // Tell the gallery how tall the card is, so its frame fits.
   new ResizeObserver(() => parent.postMessage({ type: 'widget-size', height: $('stage').offsetHeight }, '*')).observe($('stage'));
 }
-document.title = `${W.name} · ${ui.state.title}`;
-selectState(ui.state);

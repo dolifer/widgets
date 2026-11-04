@@ -1,0 +1,71 @@
+# The preview page's text from widget.yaml, by language: English → translation.
+# `npm run check` fails when a text has no translation or a key matches no text.
+uk:
+  Power schedule: Графік світла
+  "Whether the power is on now and why it is off, and what the outage schedule says comes next: an outage or the power coming back, with a countdown.": "Чи є світло зараз і чому його немає, і що далі за графіком: відключення чи повернення світла, з відліком часу."
+  Layout: Розкладка
+  Top/bottom: Згори/знизу
+  Side by side: Поруч
+  Align: Вирівнювання
+  Left: Ліворуч
+  Center: Центр
+  Right: Праворуч
+  Vertical: По вертикалі
+  Top: Вгорі
+  Bottom: Внизу
+  Icons: Іконки
+  Both: Обидві
+  Now: Зараз
+  Next: Далі
+  None: Без
+  Centre: Посередині
+  Arrow: Стрілка
+  Time: Час
+  Big: Великий
+  Day: День
+  Inline: У рядку
+  Outage: Відключення
+  Mixed: Змішано
+  Red: Червоне
+  Orange: Помаранчеве
+  Split: Лінія
+  ╱ Rise: ╱ Вгору
+  ╲ Fall: ╲ Вниз
+  ― Straight: ― Пряма
+  Gradient: Градієнт
+  "Off": Вимк
+  Blend: Перехід
+  Soft: М'який
+  Corners: Кути
+  A planned outage, start to finish: Планове відключення від початку до кінця
+  Planned day: Плановий день
+  "Power on, the outage starts at 20:00, the restore runs late past midnight, then the power is back.": "Світло є, о 20:00 починається відключення, повернення затягується за північ, потім світло повертається."
+  Outage starts, back tomorrow: Відключення, світло завтра
+  Restore running late: Повернення затримується
+  Power back: Світло повернулося
+  An outage the schedule doesn't know about: Відключення, якого немає в графіку
+  Unscheduled: Позапланове
+  "Off with nothing in the schedule, then a restore time appears, then nothing is planned.": "Світла немає, у графіку нічого, потім з'являється час повернення, далі нічого не заплановано."
+  Grid operator posts a restore time: Обленерго публікує час повернення
+  Power back, nothing planned: Світло є, нічого не заплановано
+  One schedule sensor, emergency and mixed signals: Один сенсор графіка, аварія і суперечливі дані
+  One sensor: Один сенсор
+  "A single kind|time sensor, as a template can build it. It lags behind the power, and the card follows the power.": "Один сенсор вид|час, який можна зібрати шаблоном. Він відстає від мережі, а картка йде за мережею."
+  Declared an emergency: Оголошено аварійне відключення
+  Restore time posted: Опубліковано час повернення
+  Power back early, sensor still says restore: Світло раніше, сенсор ще чекає повернення
+  Sensor catches up: Сенсор наздоганяє
+  Schedule or power sensor unavailable: Графік або сенсор мережі недоступні
+  Sensor down: Збій сенсора
+  "The schedule goes down, the power goes off without a known reason, the power sensor drops out, then all comes back.": "Графік зникає, світло вимикається без відомої причини, сенсор мережі пропадає, потім усе повертається."
+  Power off, schedule still down: Світла немає, графік досі недоступний
+  Power sensor unavailable: Сенсор мережі недоступний
+  Everything back: Усе повернулося
+  Power sensor only, no schedule: Лише сенсор мережі, без графіка
+  Power only: Лише мережа
+  Power off: Світла немає
+  Sensor unavailable: Сенсор недоступний
+  English, inverted sensor: Англійська, інвертований сенсор
+  English: Англійська
+  'An outage sensor that is "on" during an outage, read with invert.': 'Сенсор відключення, що "on" під час відключення, читається з invert.'
+  Outage starts: Відключення починається

@@ -72,6 +72,39 @@ export function checkWidget(dir, widget, validate) {
     }
     try { statesAt(scn, 0, scn.span); } catch (e) { errs.push(`states/${st.id}: ${e.message}`); }
   }
+  errs.push(...checkI18n(widget, loadI18n(dir)));
+  return errs;
+}
+
+// Every text the preview page shows from widget.yaml, in English: the keys
+// of the widget's i18n.yaml. The page's own text is in tools/preview/i18n.mjs.
+export function widgetStrings(w) {
+  const out = [w.name, w.description];
+  for (const o of (w.preview?.options || []).map(previewOption)) out.push(o.label, ...o.values.map((v) => v.label));
+  for (const st of w.states) out.push(st.title, st.label, st.description, ...(st.timeline || []).map((e) => e.note));
+  return [...new Set(out.filter((x) => typeof x === 'string').map((x) => x.trim()).filter(Boolean))];
+}
+
+// widgets/<id>/i18n.yaml: { <lang>: { <English text>: <translation> } }.
+export function loadI18n(dir) {
+  const file = path.join(dir, 'i18n.yaml');
+  if (!fs.existsSync(file)) return {};
+  try { return yaml.load(fs.readFileSync(file, 'utf8')) || {}; } catch (e) { return { error: e.message }; }
+}
+
+// A language the page offers must translate every text, and nothing else:
+// a key that matches no text is left over from an edit.
+export function checkI18n(widget, i18n) {
+  if (i18n.error) return [`i18n.yaml: ${i18n.error}`];
+  const errs = [], strings = widgetStrings(widget);
+  const langs = (widget.preview?.languages || ['en']).filter((l) => l !== 'en');
+  for (const l of Object.keys(i18n)) if (!langs.includes(l)) errs.push(`i18n.yaml: ${l} is not in preview.languages`);
+  for (const l of langs) {
+    const d = i18n[l] || {};
+    const missing = strings.filter((x) => typeof d[x] !== 'string' || !d[x].trim());
+    if (missing.length) errs.push(`i18n.yaml: ${l} has no translation for ${missing.map((x) => JSON.stringify(x)).join(', ')}`);
+    for (const k of Object.keys(d)) if (!strings.includes(k)) errs.push(`i18n.yaml: ${l} translates ${JSON.stringify(k)}, which the widget no longer shows`);
+  }
   return errs;
 }
 
@@ -150,7 +183,8 @@ export function testVariants(w) {
 // What the preview page needs for one widget: the states with their config as YAML.
 function widgetData(w) {
   return {
-    id: w.id, name: w.name, version: w.version, description: w.description || '', tag: w.tag, script: w.script,
+    id: w.id, name: w.name.trim(), version: w.version, description: (w.description || '').trim(), tag: w.tag, script: w.script,
+    i18n: loadI18n(w.dir),
     width: w.preview?.width || 420,
     languages: w.preview?.languages || ['en'],
     options: (w.preview?.options || []).map(previewOption),
@@ -184,8 +218,8 @@ export function build(root = ROOT, out = OUT) {
   }
   fs.writeFileSync(path.join(out, 'index.html'), page({
     title: 'Widgets', base: '', script: 'gallery.mjs',
-    data: all.map(({ id, name, version, description, tag, script, width, states }) => ({
-      id, name, version, description, tag, script, width, count: states.length, first: states[0].id, title: states[0].title,
+    data: all.map(({ id, name, version, description, tag, script, width, states, i18n }) => ({
+      id, name, version, description, tag, script, width, i18n, count: states.length, first: states[0].id, title: states[0].title,
     })),
     body: '<div id="app"></div>',
   }));

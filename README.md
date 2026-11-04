@@ -15,10 +15,12 @@ widgets/<id>/
   widget.yaml      name, version, and the states the preview plays
   README.md        install and options, shipped in the release zip
   render-check.js  optional: layout rules the render test checks (see below)
+  i18n.yaml        the preview page's text from widget.yaml, per language (see below)
 schema/widget.schema.yaml   what widget.yaml may hold
 tools/build.mjs             validate + generate dist/ (the Pages site)
 tools/release.mjs           pack one widget for a release
 tools/preview/              the preview runtime: fake clock, <ha-card>, themes
+tools/preview/i18n.mjs      the preview site's own text, per language
 tests/                      node tests; render.mjs drives a real browser
 ```
 
@@ -70,6 +72,22 @@ preview:
     - { key: align, label: Align, default: left, values: [left, center, right] }
     - { key: gradient, label: Gradient, default: false, values: [false, true] }
 ```
+
+## Page language
+
+The language picker in the header switches the card and the whole page. The
+page's own text (buttons, clock, panels) is in `tools/preview/i18n.mjs`; text
+that comes from widget.yaml (name, options, state titles, event notes) is in
+the widget's `i18n.yaml`, keyed by the English:
+
+```yaml
+uk:
+  Power schedule: Графік світла
+  Planned day: Плановий день
+```
+
+`npm run check` fails when a language in `preview.languages` misses a text, or
+a key matches no text any more. The theme picker sets the page's theme too.
 
 ## Layout checks
 
