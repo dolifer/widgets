@@ -127,6 +127,7 @@ properties:
       properties:
         id: { type: string, pattern: "^[a-z0-9]+(-[a-z0-9]+)*$" }
         title: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1, maxLength: 16, description: "Short name for the state toggle (default: title)" }
         description: { type: string }
         language: { $ref: "#/definitions/language" }
         theme: { $ref: "#/definitions/theme" }

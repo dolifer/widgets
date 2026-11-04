@@ -79,11 +79,10 @@ function layout() {
       <a class="btn" href="${esc(W.script)}" download title="${esc(W.script)}">Download<span class="wide-only"> ${esc(W.script)}</span></a>
     </header>
     <main class="layout">
-      <nav class="states" aria-label="States">
-        <h2>States</h2>
-        ${W.states.map((s) => `<button data-state="${esc(s.id)}"><b>${esc(s.title)}</b>${s.timeline.length ? `<span class="tag">${s.timeline.length} event${s.timeline.length > 1 ? 's' : ''}</span>` : ''}</button>`).join('')}
-      </nav>
       <section class="work">
+        <nav class="states" aria-label="States" style="--cols:${Math.ceil(W.states.length / 2)}">
+          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(s.title)}">${esc(s.label)}</button>`).join('')}
+        </nav>
         <div class="bar">
           <div class="seg" id="theme" role="group" aria-label="Theme">
             <button data-v="dark">Dark</button><button data-v="light">Light</button></div>
@@ -144,8 +143,8 @@ async function selectState(st) {
     frame.innerHTML = `<div class="err">${esc(e.message)}</div>`;
   }
   if (!embed) {
-    document.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-current', b.dataset.state === st.id));
-    $('desc').textContent = st.description;
+    document.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.state === st.id));
+    $('desc').innerHTML = `<b>${esc(st.title)}</b>${st.description ? ` · ${esc(st.description)}` : ''}`;
     showOpts();
     $('slider').max = st.span;
     $('events').innerHTML = st.timeline.length

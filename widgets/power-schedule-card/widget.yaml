@@ -57,6 +57,7 @@ config:
 states:
   - id: planned-day
     title: A planned outage, start to finish
+    label: Planned day
     description: Power on, the outage starts at 20:00, the restore runs late past midnight, then the power is back.
     entities:
       binary_sensor.grid: { state: "on", changed: now-1h04m }
@@ -86,6 +87,7 @@ states:
 
   - id: unscheduled
     title: An outage the schedule doesn't know about
+    label: Unscheduled
     description: Off with nothing in the schedule, then a restore time appears, then nothing is planned.
     entities:
       binary_sensor.grid: { state: "off", changed: now-15m }
@@ -107,6 +109,7 @@ states:
 
   - id: combined-sensor
     title: One schedule sensor, emergency and mixed signals
+    label: One sensor
     description: A single kind|time sensor, as a template can build it. It lags behind the power, and the card follows the power.
     config:
       next_outage: null
@@ -140,6 +143,7 @@ states:
 
   - id: schedule-down
     title: Schedule or power sensor unavailable
+    label: Sensor down
     description: The schedule goes down, the power goes off without a known reason, the power sensor drops out, then all comes back.
     entities:
       binary_sensor.grid: { state: "on", changed: now-40m }
@@ -167,6 +171,7 @@ states:
 
   - id: power-only
     title: Power sensor only, no schedule
+    label: Power only
     config:
       next_outage: null
       next_restore: null
@@ -187,6 +192,7 @@ states:
 
   - id: english-inverted
     title: English, inverted sensor
+    label: English
     description: An outage sensor that is "on" during an outage, read with invert.
     language: en
     theme: light

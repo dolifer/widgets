@@ -63,6 +63,7 @@ export function scenario(widget, state) {
   return {
     id: state.id,
     title: state.title,
+    label: state.label || state.title,
     description: state.description || '',
     language: state.language || widget.preview?.language || 'en',
     theme: state.theme || widget.preview?.theme || 'dark',

@@ -44,6 +44,7 @@ a timestamp sensor holds; inside a longer string write `{now+2h}`.
 states:
   - id: on-outage-next
     title: Power on, outage at 20:00
+    label: Planned day          # short name on the state toggle (≤16 chars, default: title)
     entities:
       binary_sensor.grid: { state: "on", changed: now-1h04m }
       sensor.next_outage: now+1h40m
