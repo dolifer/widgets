@@ -80,9 +80,6 @@ function layout() {
     </header>
     <main class="layout">
       <section class="work">
-        <nav class="states" aria-label="States" style="--cols:${Math.ceil(W.states.length / 2)}">
-          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(s.title)}">${esc(s.label)}</button>`).join('')}
-        </nav>
         <div class="bar">
           <div class="seg" id="theme" role="group" aria-label="Theme">
             <button data-v="dark">Dark</button><button data-v="light">Light</button></div>
@@ -96,8 +93,10 @@ function layout() {
             ${o.values.map((v, j) => `<button data-i="${j}">${esc(v.label)}</button>`).join('')}</div></div>`).join('')}
           <button class="btn ghost" id="optreset" hidden>Reset options</button>
         </div>` : ''}
-        <p class="desc" id="desc"></p>
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
+        <nav class="states" aria-label="States" style="--cols:${Math.ceil(W.states.length / 2)}">
+          ${W.states.map((s) => `<button data-state="${esc(s.id)}" title="${esc(s.title)}">${esc(s.label)}</button>`).join('')}
+        </nav>
         <div class="clock">
           <button class="play" id="play" aria-label="Play">▶</button>
           <div class="time"><b id="now">--:--</b><span id="offset"></span></div>
@@ -106,6 +105,7 @@ function layout() {
             <option value="10">10 min/s</option><option value="60" selected>1 h/s</option><option value="360">6 h/s</option></select></label>
           <button class="btn ghost" id="reset">Reset</button>
         </div>
+        <p class="desc" id="desc"></p>
         <div class="events" id="events"></div>
         <div class="panels">
           <div class="panel"><div class="ph"><h3>Card config</h3><button class="btn ghost" id="copy">Copy</button></div><pre id="yaml"></pre></div>
