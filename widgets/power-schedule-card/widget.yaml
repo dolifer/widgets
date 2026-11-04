@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.2.3
+version: 1.2.4
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -16,7 +16,7 @@ preview:
     - { key: valign, label: Vertical, default: top, values: [top, center, bottom] }
     - { key: show_now_icon, label: Now icon, default: true, values: [true, false] }
     - { key: show_next_icon, label: Next icon, default: true, values: [true, false] }
-    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next icon }] }
+    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: now, label: Now icon }, { value: next, label: Next icon }] }
     - { key: gradient, label: Gradient, default: false, values: [false, true] }
 config:
   entity: binary_sensor.grid
@@ -340,6 +340,24 @@ states:
         note: Power back, nothing planned
         set:
           binary_sensor.grid: "on"
+          sensor.next_restore: unknown
+
+  - id: seam-now-icon
+    title: Now icon in the centre (seam_icon now)
+    config:
+      seam_icon: now
+      align: center
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-40m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now+2h
+    expect: [Немає світла, за графіком, Світло буде]
+    timeline:
+      - at: now+2h
+        note: Power back
+        set:
+          binary_sensor.grid: "on"
+          sensor.next_outage: now+6h
           sensor.next_restore: unknown
 
   - id: horizontal-centered

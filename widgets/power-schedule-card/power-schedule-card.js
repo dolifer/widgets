@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.3';
+  const VERSION = '1.2.4';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -242,11 +242,14 @@
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
       const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : 'off');
       const horiz = c.layout === 'horizontal';
-      // seam_icon: next puts the next state's icon in the centre circle, in place of the arrow.
+      // seam_icon: next (or now) puts that half's icon in the centre circle,
+      // in place of the arrow, and that half drops its own.
       const seamIcon = c.seam_icon === 'next';
+      const seamNow = c.seam_icon === 'now';
       const { reason, next } = this._agree(powerOn, this._next(powerOn));
       const nowKey = powerOn === null ? 'power_unknown' : powerOn ? 'power_on' : 'power_off';
-      const icon = c.show_now_icon === false ? '' : this._icon(reason && reason !== 'unknown' ? `power_${reason}` : nowKey, nowColor, horiz ? 20 : 28);
+      const nowIconKey = reason && reason !== 'unknown' ? `power_${reason}` : nowKey;
+      const icon = c.show_now_icon === false || seamNow ? '' : this._icon(nowIconKey, nowColor, horiz ? 20 : 28);
       const nowTitle = this._t(nowKey);
       // Why the power is off, as a tag beside the title: scheduled, emergency or unscheduled.
       const why = reason ? `<span class="why">${esc(this._t(`reason_${reason}`))}</span>` : '';
@@ -263,11 +266,12 @@
           when = startOfDay(next.at) === startOfDay(new Date(now)) ? hhmm(next.at)
             : `${pad(next.at.getDate())}.${pad(next.at.getMonth() + 1)} ${hhmm(next.at)}`;
         }
+        const nextIcon = c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24);
         nextHtml = `
-          <div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : horiz ? '→' : '↓'}</div>
+          <div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : seamNow ? this._icon(nowIconKey, nowColor, 18) : horiz ? '→' : '↓'}</div>
           <div class="next${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
-            ${c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24)}
-            <div class="nx"><span class="lbl">${esc(this._t('next'))}</span>
+            ${horiz ? '' : nextIcon}
+            <div class="nx">${horiz ? `<div class="lr">${nextIcon}<span class="lbl">${esc(this._t('next'))}</span></div>` : `<span class="lbl">${esc(this._t('next'))}</span>`}
               <strong>${esc(this._t(k.label || next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
             ${when ? `<div class="when">${esc(when)}</div>` : ''}
           </div>`;
@@ -294,15 +298,15 @@
       // Side by side the halves are narrow, so it gets a row of its own.
       const title = `<strong>${esc(nowTitle)}</strong>`;
       const titleRow = horiz ? title : `<div class="ttl">${title}${why}</div>`;
-      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon ? 'si' : '', c.gradient ? 'g' : '']
+      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon || seamNow ? 'si' : '', c.gradient ? 'g' : '']
         .filter(Boolean).join(' ');
       const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
         : `--seam-l:${seamL}px;--seam-r:${seamR}px;--pt:${padTop}px;--pb:${padBottom}px`;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
           <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
-            <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${icon}<div class="txt">
-              <span class="lbl">${esc(this._t('now'))}</span>
+            <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${horiz ? '' : icon}<div class="txt">
+              ${horiz ? `<div class="lr">${icon}<span class="lbl">${esc(this._t('now'))}</span></div>` : `<span class="lbl">${esc(this._t('now'))}</span>`}
               ${titleRow}<span class="sub">${esc(sinceTxt)}</span></div>${horiz ? why : ''}</div>
             ${nextHtml}
           </div>
@@ -354,27 +358,12 @@
     .next strong { font-size:14px; line-height:18px }
     .sub { display:block; color:var(--secondary-text-color); font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
     .when { margin-left:auto; font-size:22px; line-height:26px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right }
-    /* Horizontal: each half is a grid. Icon and label share the first row, the
-       title (up to two lines) and the rest run the half's full width. */
-    .h .now, .h .next { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto auto 1fr;
-      align-items:start; align-content:start; gap:0 6px; padding:10px 14px }
-    .h .now { padding-right:calc(100% - var(--seam-b) + 8px) }
-    .h.solo .now { padding-right:14px }
-    .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
-    .h .txt, .h .nx { display:contents }
     .split:not(.h) .when { font-size:26px; line-height:30px }
     .ttl { display:flex; align-items:baseline; gap:8px; min-width:0; height:20px }
     .ttl strong { min-width:0 }
     .ttl .why { margin:0; align-self:baseline; line-height:16px }
     .al-center .ttl { justify-content:center }
     .al-right .ttl { justify-content:flex-end }
-    .h .why { grid-column:1 / 3; grid-row:4; justify-self:start; margin:2px 0 0 }
-    .h .ic { grid-column:1; grid-row:1; align-self:center; margin:0 }
-    .h .lbl { grid-column:1 / 3; grid-row:1; align-self:center }
-    .h .wi .lbl { grid-column:2 }
-    .h strong { grid-column:1 / 3; margin-top:4px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
-    .h .sub { grid-column:1 / 3 }
-    .h .next .when { grid-column:1 / 3; grid-row:4; align-self:end; justify-self:end; margin:0 }
     /* align: the text lines inside each half. */
     .al-center .txt, .al-center .nx, .al-right .txt, .al-right .nx { flex:1 }
     .al-center .txt, .al-center .nx { text-align:center }
@@ -385,25 +374,31 @@
     .split:not(.h).al-center .txt, .split:not(.h).al-center .nx { grid-column:2; grid-row:1 }
     .split:not(.h).al-center .when { grid-column:3; grid-row:1; justify-self:end; margin:0 }
     .al-right .txt, .al-right .nx { text-align:right }
-    .h.al-center .now, .h.al-center .next { justify-items:center; text-align:center }
-    .h.al-right .now, .h.al-right .next { justify-items:end; text-align:right }
-    /* Not left: the icon gets its own row above the label. */
-    .h:not(.al-left) .ic { grid-column:1 / 3; grid-row:auto; margin-bottom:4px }
-    .h:not(.al-left) .lbl, .h:not(.al-left) .wi .lbl { grid-column:1 / 3; grid-row:auto }
-    .h:not(.al-left) .now, .h:not(.al-left) .next { grid-template-rows:auto auto auto auto 1fr }
-    .h:not(.al-left) .why, .h:not(.al-left) .next .when { grid-row:-2 / -1 }
-    .h.al-center .next .when { justify-self:center }
-    .h.al-center .why { justify-self:center }
-    .h.al-right .why { justify-self:end }
-    /* valign (horizontal): each half's block at the top, middle or bottom. */
-    .h.va-center .now, .h.va-center .next { align-content:center; grid-template-rows:none }
-    .h.va-bottom .now, .h.va-bottom .next { align-content:end; grid-template-rows:none }
-    .h.va-center .next .when, .h.va-bottom .next .when { grid-row:auto; margin-top:4px }
-    .h.va-center .why, .h.va-bottom .why { grid-row:auto }
-    .h.va-center .ic, .h.va-bottom .ic, .h.va-center .lbl, .h.va-bottom .lbl { grid-row:auto }
+    /* Horizontal: each half is a column: icon and label on one row, then the
+       title (up to two lines), the duration, and the reason or the time, all
+       aligned together and moved together by valign. */
+    .h .now, .h .next { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:0; padding:10px 14px }
+    .h .now { padding-right:calc(100% - var(--seam-b) + 8px) }
+    .h.solo .now { padding-right:14px }
+    .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
+    .h .txt, .h .nx { display:block; flex:none }
+    .h .lr { display:flex; align-items:center; gap:6px; min-width:0 }
+    .h .lr .ic { margin:0; flex:none }
+    .h strong { margin-top:4px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
+    .h .why { align-self:flex-start; margin:2px 0 0 }
+    .h .next .when { align-self:flex-start; margin:4px 0 0 }
+    .h.al-center .now, .h.al-center .next { text-align:center }
+    .h.al-center .lr { justify-content:center }
+    .h.al-center .why, .h.al-center .next .when { align-self:center }
+    .h.al-right .now, .h.al-right .next { text-align:right }
+    .h.al-right .lr { justify-content:flex-end }
+    .h.al-right .why, .h.al-right .next .when { align-self:flex-end }
+    .h.va-center .now, .h.va-center .next { justify-content:center }
+    .h.va-bottom .now, .h.va-bottom .next { justify-content:flex-end }
     .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - var(--sz) / 2); top:calc(50% - var(--sz) / 2) }
     .split { --sz:26px }
     .split.si { --sz:32px }
+    .split.si.al-center:not(.h) { --sz:26px }   /* centred text runs right past the circle */
     .seam .ic { margin:0 }
     .seam { position:absolute; left:calc(50% - var(--sz) / 2); top:calc((var(--seam-l) + var(--seam-r)) / 2 - var(--sz) / 2); width:var(--sz); height:var(--sz); box-sizing:border-box; border-radius:50%;
       background:var(--bg); border:1px solid var(--divider-color, rgba(127,127,127,.25)); display:grid; place-items:center; font-size:14px; z-index:2 }
