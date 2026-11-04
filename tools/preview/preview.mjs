@@ -59,7 +59,7 @@ const ui = {
   lang: W.languages.includes(q.get('lang')) ? q.get('lang') : null,
   off: (parseFloat(q.get('t')) || 0) * 6e4,
   opts: readOpts(),   // card options picked in the bar, over the state's config
-  speed: 60,       // preview minutes per real second
+  speed: 60,       // preview minutes per real second: an hour a second
   playing: false,
 };
 let t0 = 0, card = null, raf = 0, lastTick = 0;
@@ -115,8 +115,6 @@ function layout() {
           <button class="play" id="play" aria-label="${esc(t('Play'))}">▶</button>
           <div class="time"><b id="now">--:--</b><span id="offset"></span></div>
           <input type="range" id="slider" min="0" step="60000" aria-label="${esc(t('Preview clock'))}">
-          <label class="sel">${esc(t('Speed'))} <select id="speed">
-            ${[[10, t('{n} min/s', { n: 10 })], [60, t('{n} h/s', { n: 1 })], [360, t('{n} h/s', { n: 6 })]].map(([v, l]) => `<option value="${v}"${v === ui.speed ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
           <button class="btn ghost" id="reset">${esc(t('Reset'))}</button>
         </div>
         <p class="desc" id="desc"></p>
@@ -293,7 +291,6 @@ function bind() {
     showOpts(); update(true);
   });
   $('slider').addEventListener('input', (e) => { ui.off = +e.target.value; update(); });
-  $('speed').addEventListener('change', (e) => { ui.speed = +e.target.value; });
   $('reset').addEventListener('click', () => { ui.off = 0; ui.playing = false; update(); });
   $('play').addEventListener('click', () => {
     ui.playing = !ui.playing;
