@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.4.0';
+  const VERSION = '1.4.1';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -368,20 +368,12 @@
     .next { align-items:flex-end; padding-bottom:var(--pb, 10px); gap:10px;
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
-    /* gradient: one wash across the card, square to the seam (--ga, set from
-       the card's size): each colour is deepest at its outer edge, fades toward
-       the seam, and the two meet in a soft glowing band along the diagonal. */
-    .g { --ga:180deg; --mid:color-mix(in srgb, color-mix(in srgb, var(--tint) 50%, var(--tint2)) 75%, white);
-      background:
-        linear-gradient(var(--ga), transparent 44%, color-mix(in srgb, var(--mid) 26%, transparent) 50%, transparent 56%),
-        linear-gradient(var(--ga),
-          color-mix(in srgb, var(--tint) 42%, transparent) 0%,
-          color-mix(in srgb, var(--tint) 16%, transparent) 47%,
-          color-mix(in srgb, var(--tint2) 16%, transparent) 53%,
-          color-mix(in srgb, var(--tint2) 42%, transparent) 100%),
-        var(--bg) }
+    /* gradient: each half fades from its outer edge (34%) to faint (6%) at
+       the seam, as before, but square to the seam (--ga, set from the card's
+       size) so the fade follows the diagonal. The edge stays crisp. */
+    .g { --ga:180deg; background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 34%, transparent), color-mix(in srgb, var(--tint) 6%, transparent) 50%), var(--bg) }
     .g.h { --ga:90deg }
-    .g .next { background:none }
+    .g .next { background:linear-gradient(var(--ga), color-mix(in srgb, var(--tint) 6%, transparent) 50%, color-mix(in srgb, var(--tint) 34%, transparent)), var(--bg) }
     .txt, .nx { min-width:0 }
     .why { margin-left:auto; flex:none; align-self:flex-start; font-size:13px; line-height:20px; white-space:nowrap; color:var(--secondary-text-color) }
     .nx { flex:1 }
