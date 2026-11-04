@@ -136,6 +136,19 @@ test('pack refuses a tag whose version is not the widget’s', () => {
   assert.throws(() => pack('nope-v1.0.0'), /no widget/);
 });
 
+test('pack writes the card, its README and hacs.json for the widget\'s own version', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'widgets-'));
+  fs.cpSync(path.join(import.meta.dirname, '..', 'schema'), path.join(root, 'schema'), { recursive: true });
+  fs.cpSync(path.join(import.meta.dirname, '..', 'widgets'), path.join(root, 'widgets'), { recursive: true });
+  const w = loadWidgets(root).widgets[0];
+  const r = pack(`${w.id}-v${w.version}`, root);
+  assert.equal(r.out, path.join(root, 'release', `${w.id}-${w.version}.zip`));
+  assert.deepEqual(r.files, [w.script, 'README.md', 'hacs.json']);
+  const zipped = fs.readFileSync(r.out);
+  assert.ok(zipped.includes(Buffer.from('hacs.json')));
+  assert.throws(() => pack('not a tag', root), /must look like/);
+});
+
 test('zip holds the files, readable back', () => {
   const buf = zip([['a.js', 'console.log(1)\n'], ['hacs.json', '{"zip_release":true}']]);
   assert.equal(buf.readUInt32LE(0), 0x04034b50);
@@ -206,4 +219,15 @@ test('page text: every t() in the page scripts has each translation', () => {
   assert.equal(t('Size'), 'Розмір');
   assert.equal(t('{m} min', { m: 5 }), '5 хв');
   assert.equal(t('Unknown text'), 'Unknown text');
+});
+
+test('time fields: tokens, ISO times, and the clock with no HH:MM', async () => {
+  const { isTimeToken, timeOf } = await import('../tools/preview/scenario.mjs');
+  assert.ok(isTimeToken('now + 2h'));
+  assert.ok(!isTimeToken('tomorrow'));
+  assert.equal(timeOf('now+1h', 1000), 1000 + H);
+  assert.equal(timeOf('2026-01-01T00:00:00Z', 0), Date.parse('2026-01-01T00:00:00Z'));
+  assert.equal(timeOf('soon', 0), null);
+  const t = startTime(undefined, Date.parse('2026-01-01T10:20:35.500Z'));
+  assert.equal(t, Date.parse('2026-01-01T10:20:00Z'));
 });

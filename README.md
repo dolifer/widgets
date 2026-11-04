@@ -33,6 +33,7 @@ npm test                 # node tests
 npm run build            # dist/
 npm run serve            # http://localhost:8080 after a build
 npm run test:render      # every state in Chromium (needs Playwright; skips without)
+npm run test:render -- --coverage   # also: how much of each card the renders ran, and the lines never run
 ```
 
 ## States in widget.yaml
