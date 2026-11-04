@@ -41,9 +41,13 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .seg button { all: unset; cursor: pointer; padding: 5px 11px; border-radius: 6px; color: var(--muted); font-weight: 500; font-size: 13px }
 .seg button small { font-weight: 400; opacity: .7 }
 .seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12) }
-.bar.opts { margin-top: 10px; gap: 8px 14px }
-.grp { display: inline-flex; align-items: center; gap: 6px }
-.grp > span { font-size: 12px; color: var(--muted) }
+/* Card options: label above a small segment, so two or three groups fit a phone row. */
+.bar.opts { margin-top: 4px; gap: 8px 10px; align-items: flex-end }
+.grp { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px }
+.grp > span { font-size: 11px; color: var(--muted); padding-left: 2px }
+.opts .seg { padding: 2px; border-radius: 7px }
+.opts .seg button { padding: 3px 7px; font-size: 12px; border-radius: 5px }
+.opts #optreset { padding: 5px 9px; font-size: 12px }
 .sel { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px }
 select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px }
 .desc { min-height: 1.4em }
