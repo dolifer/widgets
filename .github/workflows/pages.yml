@@ -18,13 +18,17 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, widgets]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build

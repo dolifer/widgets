@@ -8,7 +8,7 @@ import Ajv from 'ajv';
 import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants, widgetStrings, checkI18n } from '../tools/build.mjs';
 import { PAGE, translator } from '../tools/preview/i18n.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
-import { parseTag, pack, zip } from '../tools/release.mjs';
+import { parseTag, pack } from '../tools/release.mjs';
 
 const validate = new Ajv({ allErrors: true, strict: false }).compile(loadSchema());
 const H = 36e5, M = 6e4;
@@ -122,43 +122,33 @@ test('build writes a page per widget with its data inline', () => {
   assert.ok(fs.existsSync(path.join(out, 'assets', 'preview.mjs')));
 });
 
-test('release tags', () => {
-  assert.deepEqual(parseTag('power-schedule-card-v1.2.3'), { id: 'power-schedule-card', version: '1.2.3' });
-  assert.deepEqual(parseTag('x-v2.0.0-beta.1'), { id: 'x', version: '2.0.0-beta.1' });
-  assert.equal(parseTag('v1.0.0'), null);
-  assert.equal(parseTag('power-schedule-card-1.0.0'), null);
+test('release tags: v<semver>', () => {
+  assert.equal(parseTag('v1.2.3'), '1.2.3');
+  assert.equal(parseTag('v2.0.0-beta.1'), '2.0.0-beta.1');
+  assert.equal(parseTag('power-schedule-card-v1.0.0'), null);
+  assert.equal(parseTag('1.0.0'), null);
 });
 
-test('pack refuses a tag whose version is not the widget’s', () => {
-  const { widgets } = loadWidgets();
-  const w = widgets[0];
-  assert.throws(() => pack(`${w.id}-v99.0.0`), /widget\.yaml says/);
-  assert.throws(() => pack('nope-v1.0.0'), /no widget/);
-});
-
-test('pack writes the card, its README and hacs.json for the widget\'s own version', () => {
+test('pack writes one bundle with every card, for package.json\'s version only', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'widgets-'));
-  fs.cpSync(path.join(import.meta.dirname, '..', 'schema'), path.join(root, 'schema'), { recursive: true });
-  fs.cpSync(path.join(import.meta.dirname, '..', 'widgets'), path.join(root, 'widgets'), { recursive: true });
-  const w = loadWidgets(root).widgets[0];
-  const r = pack(`${w.id}-v${w.version}`, root);
-  assert.equal(r.out, path.join(root, 'release', `${w.id}-${w.version}.zip`));
-  assert.deepEqual(r.files, [w.script, 'README.md', 'hacs.json']);
-  const zipped = fs.readFileSync(r.out);
-  assert.ok(zipped.includes(Buffer.from('hacs.json')));
-  assert.throws(() => pack('not a tag', root), /must look like/);
+  for (const d of ['schema', 'widgets']) fs.cpSync(path.join(import.meta.dirname, '..', d), path.join(root, d), { recursive: true });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '2.1.0' }));
+  const { widgets } = loadWidgets(root);
+  const r = pack('v2.1.0', root);
+  assert.equal(r.out, path.join(root, 'release', 'widgets.js'));
+  const js = fs.readFileSync(r.out, 'utf8');
+  for (const w of widgets) assert.ok(js.includes(`customElements`) && js.includes(w.tag), w.tag);
+  assert.match(js, /^\/\* widgets 2\.1\.0: /);
+  assert.match(fs.readFileSync(path.join(root, 'release', 'notes.md'), 'utf8'), new RegExp(`\\| \`${widgets[0].tag}\` \\| ${widgets[0].version.replace(/\./g, '\\.')} \\|`));
+  assert.throws(() => pack('v9.9.9', root), /package\.json says 2\.1\.0/);
+  assert.throws(() => pack('nope', root), /must look like/);
 });
 
-test('zip holds the files, readable back', () => {
-  const buf = zip([['a.js', 'console.log(1)\n'], ['hacs.json', '{"zip_release":true}']]);
-  assert.equal(buf.readUInt32LE(0), 0x04034b50);
-  const end = buf.length - 22;
-  assert.equal(buf.readUInt32LE(end), 0x06054b50);
-  assert.equal(buf.readUInt16LE(end + 10), 2);
-  // First entry: inflate it and compare.
-  const nameLen = buf.readUInt16LE(26), size = buf.readUInt32LE(18);
-  assert.equal(buf.subarray(30, 30 + nameLen).toString(), 'a.js');
-  assert.equal(zlib.inflateRawSync(buf.subarray(30 + nameLen, 30 + nameLen + size)).toString(), 'console.log(1)\n');
+test('the build serves the bundle too, and it parses', async () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'dist-'));
+  build(undefined, out);
+  const js = fs.readFileSync(path.join(out, 'widgets.js'), 'utf8');
+  new Function(js);   // throws on a syntax error
 });
 
 test('preview options: one key or a set of keys per chip', () => {

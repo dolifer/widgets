@@ -1,7 +1,7 @@
 name: CI
 
-# Validates every widget.yaml, runs the tests and builds the preview site.
-# Pages deploys from main in pages.yml; this is the check on a PR.
+# Validates every widget.yaml, runs the tests, builds the preview site and
+# renders every state in Chromium. Pages deploys from main in pages.yml.
 on:
   pull_request:
   workflow_dispatch:
@@ -15,14 +15,22 @@ permissions:
 
 jobs:
   test:
-    # Self-hosted only: hosted minutes are billed. The `widgets` runner lives
-    # in CT 102 with the other repos' runners (dolifer/homelab, docs/CI-RUNNERS.md).
-    runs-on: [self-hosted, widgets]
-    timeout-minutes: 10
+    # GitHub-hosted: the repo is public, so these minutes are free, and no job
+    # from a fork's pull request can reach a machine at home.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-      - run: node --version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run check
       - run: npm test
       - run: npm run build
+      - name: Render every state
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          npm run test:render -- --coverage

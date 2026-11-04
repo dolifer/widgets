@@ -6,22 +6,26 @@ The card is one JavaScript file with no build step and no dependencies. It speak
 
 ## Install
 
-1. Download `power-schedule-card.js` (from the latest `power-schedule-card-v…` release, or the
-   preview page's **Download** button) and save it as `/config/www/power-schedule-card.js` on
-   your Home Assistant host.
-2. Add it as a dashboard resource: **Settings → Dashboards → ⋮ → Resources → Add resource**
-   - URL: `/local/power-schedule-card.js?v=1`
-   - Type: **JavaScript module**
+The card ships in `widgets.js` with the other cards from this repo; one resource loads them all.
 
-   Or, for YAML-mode dashboards:
-   ```yaml
-   lovelace:
-     resources:
-       - url: /local/power-schedule-card.js?v=1
-         type: module
-   ```
-3. Reload the browser (on the phone app: Settings → Companion app → Debugging → Reset frontend cache).
-4. Add the card to a dashboard (examples below).
+- **HACS:** HACS → ⋮ → Custom repositories → `https://github.com/dolifer/widgets`, type
+  **Dashboard**. Install **Widgets**; HACS adds the resource.
+- **By hand:**
+  1. Download `widgets.js` from the latest release and save it as `/config/www/widgets.js`
+     on your Home Assistant host. (This card alone is the preview page's **Download** button.)
+  2. Add it as a dashboard resource: **Settings → Dashboards → ⋮ → Resources → Add resource**
+     - URL: `/local/widgets.js?v=1`
+     - Type: **JavaScript module**
+
+     Or, for YAML-mode dashboards:
+     ```yaml
+     lovelace:
+       resources:
+         - url: /local/widgets.js?v=1
+           type: module
+     ```
+Then reload the browser (on the phone app: Settings → Companion app → Debugging → Reset frontend cache).
+Then add the card to a dashboard (examples below).
 
 When you replace the file with a newer version, bump `?v=1` to `?v=2`, or browsers keep the old copy.
 

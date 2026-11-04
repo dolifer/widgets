@@ -13,12 +13,13 @@ YAML: every state a card can be in, playable on a clock.
 widgets/<id>/
   <id>.js          the card: one file, no build step
   widget.yaml      name, version, and the states the preview plays
-  README.md        install and options, shipped in the release zip
+  README.md        install and options
   render-check.js  optional: layout rules the render test checks (see below)
   i18n.yaml        the preview page's text from widget.yaml, per language (see below)
 schema/widget.schema.yaml   what widget.yaml may hold
 tools/build.mjs             validate + generate dist/ (the Pages site)
-tools/release.mjs           pack one widget for a release
+tools/release.mjs           pack widgets.js, every card in one file, for a release
+hacs.json                   tells HACS to install widgets.js
 tools/preview/              the preview runtime: fake clock, <ha-card>, themes
 tools/preview/i18n.mjs      the preview site's own text, per language
 tests/                      node tests; render.mjs drives a real browser
@@ -120,28 +121,37 @@ point, in the state's language; a leading `!` means it must not appear:
 
 ## Releases
 
-Each widget is versioned on its own. Bump `version` in its `widget.yaml` and
-the `VERSION` constant in its script, merge, then tag:
+All cards ship as one file, `widgets.js`, like Mushroom: install once, get
+every card. The bundle has one version (`version` in `package.json`); each
+card keeps its own in its `widget.yaml` and `VERSION`, listed in the release
+notes. Bump the bundle at the level of the biggest card change, merge, then
+tag:
 
 ```sh
-git tag power-schedule-card-v1.0.1 && git push origin power-schedule-card-v1.0.1
+git tag v1.0.1 && git push origin v1.0.1
 ```
 
-`release.yml` checks the tag against `widget.yaml` and attaches
-`<id>-<version>.zip` (the card, its README, a `hacs.json` with
-`zip_release: true`).
+`release.yml` checks the tag against `package.json` and attaches
+`widgets.js`. A pre-release version (`1.0.0-beta.1`) makes a draft
+pre-release, to publish by hand after trying it.
 
-HACS treats one repo as one card, so this repo is not a HACS source itself.
-To list a widget in HACS, mirror its releases into a small public repo of its
-own.
+### Installing
+
+- **HACS:** add `https://github.com/dolifer/widgets` as a custom repository
+  of type Dashboard. `hacs.json` names `widgets.js`, taken from the latest
+  release.
+- **By hand:** copy `widgets.js` from a release to `/config/www/` and add
+  `/local/widgets.js?v=1` as a JavaScript module resource.
+- **From Pages:** `https://dolifer.github.io/widgets/widgets.js` is the build
+  of main, for trying a change before it is released.
 
 ## CI
 
-Every job runs on the self-hosted `widgets` runner (CT 102, declared in
-`dolifer/homelab`). Hosted runners are billed: do not add one.
+Every job runs on a GitHub-hosted runner (`ubuntu-latest`): the repo is
+public, so they cost nothing, and a fork's pull request never reaches a
+machine at home. Do not add a self-hosted one.
 
-- `ci.yml`: pull requests: check, test, build.
+- `ci.yml`: pull requests: check, test, build, render every state with coverage.
 - `pages.yml`: main: test, build, deploy to GitHub Pages
-  (Settings → Pages → Source: GitHub Actions). The site is public even while
-  the repo is private.
-- `release.yml`: tags `<id>-v<semver>`: pack and publish one widget.
+  (Settings → Pages → Source: GitHub Actions).
+- `release.yml`: tags `v<semver>`: pack `widgets.js` and publish it.

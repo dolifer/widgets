@@ -198,6 +198,13 @@ function widgetData(w) {
   };
 }
 
+// Every card script in one file, the bundle HACS installs. Each card is its
+// own IIFE that defines its element once, so they can share a file.
+export function bundleOf(widgets, version) {
+  const head = `/* widgets ${version}: ${widgets.map((w) => `${w.tag} ${w.version}`).join(', ')} */\n`;
+  return head + widgets.map((w) => fs.readFileSync(path.join(w.dir, w.script), 'utf8').trimEnd()).join('\n\n') + '\n';
+}
+
 export function build(root = ROOT, out = OUT) {
   const { widgets, problems } = loadWidgets(root);
   if (problems.length) return { widgets, problems };
@@ -219,6 +226,9 @@ export function build(root = ROOT, out = OUT) {
       body: '<div id="app"></div>',
     }));
   }
+  // The bundle HACS installs, also served by Pages so a dashboard can load it directly.
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  fs.writeFileSync(path.join(out, 'widgets.js'), bundleOf(widgets, pkg.version));
   fs.writeFileSync(path.join(out, 'index.html'), page({
     title: 'Widgets', base: '', script: 'gallery.mjs',
     data: all.map(({ id, name, version, description, tag, script, width, states, i18n }) => ({
