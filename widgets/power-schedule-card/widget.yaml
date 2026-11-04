@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.2.4
+version: 1.3.0
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.

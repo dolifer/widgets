@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.4';
+  const VERSION = '1.3.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -242,6 +242,12 @@
       const sinceTxt = powerOn !== null && since ? this._t('since', this._dur(now - Date.parse(since))) : '';
       const nowColor = this._color(powerOn === null ? 'unknown' : powerOn ? 'on' : 'off');
       const horiz = c.layout === 'horizontal';
+      // align and valign place the "now" block; the "next" block mirrors it
+      // (left ↔ right, top ↔ bottom) so the two balance across the card.
+      const valign = ['top', 'center', 'bottom'].includes(c.valign) ? c.valign : 'top';
+      const align = ['left', 'center', 'right'].includes(c.align) ? c.align : 'left';
+      const MIRROR = { left: 'right', right: 'left', top: 'bottom', bottom: 'top', center: 'center' };
+      const nextAlign = MIRROR[align], nextValign = MIRROR[valign];
       // seam_icon: next (or now) puts that half's icon in the centre circle,
       // in place of the arrow, and that half drops its own.
       const seamIcon = c.seam_icon === 'next';
@@ -269,7 +275,7 @@
         const nextIcon = c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24);
         nextHtml = `
           <div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : seamNow ? this._icon(nowIconKey, nowColor, 18) : horiz ? '→' : '↓'}</div>
-          <div class="next${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
+          <div class="next a-${nextAlign} v-${nextValign}${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
             ${horiz ? '' : nextIcon}
             <div class="nx">${horiz ? `<div class="lr">${nextIcon}<span class="lbl">${esc(this._t('next'))}</span></div>` : `<span class="lbl">${esc(this._t('next'))}</span>`}
               <strong>${esc(this._t(k.label || next.kind))}</strong><span class="sub">${esc(sub)}</span></div>
@@ -286,26 +292,24 @@
       // valign: where each text block sits in its half. Stacked, "top" and
       // "bottom" mean the card's edges; the "now" block lives above the seam's
       // highest point and the "next" block below its lowest.
-      const valign = ['top', 'center', 'bottom'].includes(c.valign) ? c.valign : null;
-      const align = ['left', 'center', 'right'].includes(c.align) ? c.align : 'left';
       const BLOCK = 46, EDGE = 10, NEAR = 6;
       const nowRoom = seamR, nextRoom = height - seamL;
       const padTop = valign === 'center' ? Math.max(EDGE, Math.floor((nowRoom - BLOCK) / 2))
         : valign === 'bottom' ? Math.max(EDGE, nowRoom - BLOCK - NEAR) : EDGE;
-      const padBottom = valign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
-        : valign === 'top' ? Math.max(EDGE, nextRoom - BLOCK - NEAR) : EDGE;
+      const padBottom = nextValign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
+        : nextValign === 'top' ? Math.max(EDGE, nextRoom - BLOCK - NEAR) : EDGE;
       // Stacked, the reason tag sits on the title row, right after the title.
       // Side by side the halves are narrow, so it gets a row of its own.
       const title = `<strong>${esc(nowTitle)}</strong>`;
       const titleRow = horiz ? title : `<div class="ttl">${title}${why}</div>`;
-      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, horiz && valign ? `va-${valign}` : '', seamIcon || seamNow ? 'si' : '', c.gradient ? 'g' : '']
+      const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, seamIcon || seamNow ? 'si' : '', c.gradient ? 'g' : '']
         .filter(Boolean).join(' ');
       const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
         : `--seam-l:${seamL}px;--seam-r:${seamR}px;--pt:${padTop}px;--pb:${padBottom}px`;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
           <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
-            <div class="now${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${horiz ? '' : icon}<div class="txt">
+            <div class="now a-${align} v-${valign}${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${horiz ? '' : icon}<div class="txt">
               ${horiz ? `<div class="lr">${icon}<span class="lbl">${esc(this._t('now'))}</span></div>` : `<span class="lbl">${esc(this._t('now'))}</span>`}
               ${titleRow}<span class="sub">${esc(sinceTxt)}</span></div>${horiz ? why : ''}</div>
             ${nextHtml}
@@ -362,18 +366,18 @@
     .ttl { display:flex; align-items:baseline; gap:8px; min-width:0; height:20px }
     .ttl strong { min-width:0 }
     .ttl .why { margin:0; align-self:baseline; line-height:16px }
-    .al-center .ttl { justify-content:center }
-    .al-right .ttl { justify-content:flex-end }
+    .a-center .ttl { justify-content:center }
+    .a-right .ttl { justify-content:flex-end }
     /* align: the text lines inside each half. */
-    .al-center .txt, .al-center .nx, .al-right .txt, .al-right .nx { flex:1 }
-    .al-center .txt, .al-center .nx { text-align:center }
+    .a-center .txt, .a-center .nx, .a-right .txt, .a-right .nx { flex:1 }
+    .a-center .txt, .a-center .nx { text-align:center }
     /* Stacked and centred: three columns with equal sides, so the text is
        centred on the whole card width, with the icon left and the time right. */
-    .split:not(.h).al-center .now, .split:not(.h).al-center .next { display:grid; grid-template-columns:1fr minmax(0,max-content) 1fr; column-gap:12px }
-    .split:not(.h).al-center .ic { grid-column:1; grid-row:1; justify-self:start }
-    .split:not(.h).al-center .txt, .split:not(.h).al-center .nx { grid-column:2; grid-row:1 }
-    .split:not(.h).al-center .when { grid-column:3; grid-row:1; justify-self:end; margin:0 }
-    .al-right .txt, .al-right .nx { text-align:right }
+    .split:not(.h) .a-center { display:grid; grid-template-columns:1fr minmax(0,max-content) 1fr; column-gap:12px }
+    .split:not(.h) .a-center .ic { grid-column:1; grid-row:1; justify-self:start }
+    .split:not(.h) .a-center .txt, .split:not(.h) .a-center .nx { grid-column:2; grid-row:1 }
+    .split:not(.h) .a-center .when { grid-column:3; grid-row:1; justify-self:end; margin:0 }
+    .a-right .txt, .a-right .nx { text-align:right }
     /* Horizontal: each half is a column: icon and label on one row, then the
        title (up to two lines), the duration, and the reason or the time, all
        aligned together and moved together by valign. */
@@ -387,14 +391,14 @@
     .h strong { margin-top:4px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
     .h .why { align-self:flex-start; margin:2px 0 0 }
     .h .next .when { align-self:flex-start; margin:4px 0 0 }
-    .h.al-center .now, .h.al-center .next { text-align:center }
-    .h.al-center .lr { justify-content:center }
-    .h.al-center .why, .h.al-center .next .when { align-self:center }
-    .h.al-right .now, .h.al-right .next { text-align:right }
-    .h.al-right .lr { justify-content:flex-end }
-    .h.al-right .why, .h.al-right .next .when { align-self:flex-end }
-    .h.va-center .now, .h.va-center .next { justify-content:center }
-    .h.va-bottom .now, .h.va-bottom .next { justify-content:flex-end }
+    .h .a-center { text-align:center }
+    .h .a-center .lr { justify-content:center }
+    .h .a-center .why, .h .a-center .when { align-self:center }
+    .h .a-right { text-align:right }
+    .h .a-right .lr { justify-content:flex-end }
+    .h .a-right .why, .h .a-right .when { align-self:flex-end }
+    .h .v-center { justify-content:center }
+    .h .v-bottom { justify-content:flex-end }
     .h .seam { left:calc((var(--seam-t) + var(--seam-b)) / 2 - var(--sz) / 2); top:calc(50% - var(--sz) / 2) }
     .split { --sz:26px }
     .split.si { --sz:32px }

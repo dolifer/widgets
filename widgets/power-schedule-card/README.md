@@ -96,8 +96,8 @@ template:
 | `schedule` | — | One sensor with `kind\|ISO time`; wins over the two above |
 | `height` | `150` | Card height in px (130–400) |
 | `layout` | `stacked` | `stacked`: now on top, next below. `horizontal`: now on the left, next on the right |
-| `align` | `left` | Text across each half: `left`, `center` or `right` |
-| `valign` | `top`/`bottom` | Text up and down each half: `top`, `center` or `bottom`. By default "now" sits at the top and "next" at the bottom |
+| `align` | `left` | Where the "now" text sits across its half: `left`, `center` or `right`. The "next" text mirrors it (left ↔ right) so the two balance across the card |
+| `valign` | `top` | Where the "now" text sits up and down its half: `top`, `center` or `bottom`. The "next" text mirrors it (top ↔ bottom) |
 | `seam_icon` | `arrow` | `next` or `now` shows that half's icon in the centre circle instead of the arrow (that half then has no icon of its own) |
 | `gradient` | `false` | `true` fades each half's colour from its outer edge toward the seam instead of a flat tint |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
