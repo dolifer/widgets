@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv from 'ajv';
-import { loadWidgets, checkWidget, loadSchema, build, previewOption, testVariants, widgetStrings, checkI18n } from '../tools/build.mjs';
+import { loadWidgets, checkWidget, loadSchema, build, repoUrl, previewOption, testVariants, widgetStrings, checkI18n } from '../tools/build.mjs';
 import { PAGE, translator } from '../tools/preview/i18n.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
 import { parseTag, pack } from '../tools/release.mjs';
@@ -120,6 +120,17 @@ test('build writes a page per widget with its data inline', () => {
   }
   assert.ok(fs.existsSync(path.join(out, 'index.html')));
   assert.ok(fs.existsSync(path.join(out, 'assets', 'preview.mjs')));
+});
+
+test('every page links to the repo from package.json', () => {
+  assert.equal(repoUrl({ repository: 'git+https://github.com/o/r.git' }), 'https://github.com/o/r');
+  assert.equal(repoUrl({ repository: { url: 'https://github.com/o/r' } }), 'https://github.com/o/r');
+  assert.equal(repoUrl({}), '');
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'dist-'));
+  const { widgets } = build(undefined, out);
+  for (const f of ['index.html', ...widgets.map((w) => path.join(w.id, 'index.html'))]) {
+    assert.match(fs.readFileSync(path.join(out, f), 'utf8'), /<div id="app" data-repo="https:\/\/github\.com\/dolifer\/widgets">/, f);
+  }
 });
 
 test('release tags: v<semver>', () => {

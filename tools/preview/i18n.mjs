@@ -34,6 +34,7 @@ export const PAGE = {
     'Widgets': 'Віджети',
     'Home Assistant cards. Open one to play through its states.': 'Картки для Home Assistant. Відкрийте будь-яку, щоб програти її стани.',
     '{n} states': 'станів: {n}',
+    'Source on GitHub': 'Код на GitHub',
   },
 };
 

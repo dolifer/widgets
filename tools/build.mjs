@@ -129,6 +129,12 @@ export function loadWidgets(root = ROOT) {
   return { widgets, problems };
 }
 
+// The repo's web address from package.json, for the pages' source links.
+export function repoUrl(pkg) {
+  const r = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
+  return r ? r.replace(/^git\+/, '').replace(/\.git$/, '') : '';
+}
+
 function page({ title, body, data, script, base }) {
   return `<!doctype html>
 <html lang="en">
@@ -215,6 +221,8 @@ export function build(root = ROOT, out = OUT) {
   }
   fs.writeFileSync(path.join(out, '.nojekyll'), '');
 
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const app = `<div id="app" data-repo="${esc(repoUrl(pkg))}"></div>`;
   const all = widgets.map(widgetData);
   for (const w of widgets) {
     const d = path.join(out, w.id);
@@ -223,18 +231,17 @@ export function build(root = ROOT, out = OUT) {
     const data = all.find((x) => x.id === w.id);
     fs.writeFileSync(path.join(d, 'index.html'), page({
       title: `${w.name} · widget preview`, base: '../', script: 'preview.mjs', data,
-      body: '<div id="app"></div>',
+      body: app,
     }));
   }
   // The bundle HACS installs, also served by Pages so a dashboard can load it directly.
-  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   fs.writeFileSync(path.join(out, 'widgets.js'), bundleOf(widgets, pkg.version));
   fs.writeFileSync(path.join(out, 'index.html'), page({
     title: 'Widgets', base: '', script: 'gallery.mjs',
     data: all.map(({ id, name, version, description, tag, script, width, states, i18n }) => ({
       id, name, version, description, tag, script, width, i18n, count: states.length, first: states[0].id, title: states[0].title,
     })),
-    body: '<div id="app"></div>',
+    body: app,
   }));
   return { widgets, problems };
 }

@@ -1,8 +1,10 @@
 // The site's front page: every widget, with its first state running live.
 // It speaks and looks like the visitor's last pick on a preview page.
 import { translator, remembered } from './i18n.mjs';
+import { github } from './icons.mjs';
 
 const W = JSON.parse(document.getElementById('data').textContent);
+const repo = document.getElementById('app').dataset.repo;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const lang = remembered.get('lang') || (/^uk\b/i.test(navigator.language) ? 'uk' : 'en');
@@ -13,7 +15,8 @@ const page = translator(lang);
 document.title = page('Widgets');
 
 document.getElementById('app').innerHTML = `
-  <header class="top"><div><h1>${esc(page('Widgets'))}</h1><p>${esc(page('Home Assistant cards. Open one to play through its states.'))}</p></div></header>
+  <header class="top"><div><h1>${esc(page('Widgets'))}</h1><p>${esc(page('Home Assistant cards. Open one to play through its states.'))}</p></div>
+    ${repo ? `<a class="btn ghost gh" href="${esc(repo)}" title="${esc(page('Source on GitHub'))}" aria-label="${esc(page('Source on GitHub'))}">${github}<span class="wide-only"> GitHub</span></a>` : ''}</header>
   <main class="gallery">
     ${W.map((w) => {
       const t = translator(lang, w.i18n);
