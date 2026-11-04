@@ -112,6 +112,8 @@ function widgetData(w) {
     id: w.id, name: w.name, version: w.version, description: w.description || '', tag: w.tag, script: w.script,
     width: w.preview?.width || 420,
     languages: w.preview?.languages || ['en'],
+    options: (w.preview?.options || []).map((o) => ({ key: o.key, label: o.label || o.key, default: o.default ?? null,
+      values: o.values.map((v) => (v !== null && typeof v === 'object' ? { label: String(v.value), ...v } : { value: v, label: v === true ? 'On' : v === false ? 'Off' : String(v).charAt(0).toUpperCase() + String(v).slice(1) })) })),
     states: w.states.map((st) => {
       const scn = scenario(w, st);
       return { ...scn, yaml: yaml.dump(scn.config, { lineWidth: 100 }) };

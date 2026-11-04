@@ -1,7 +1,7 @@
 // The preview page for one widget: pick a state, a theme and a width, and
 // move the clock to watch the card react as the state's timeline plays.
 //
-// URL: ?state=<id>&t=<minutes>&theme=dark|light&w=<px>&lang=<code>
+// URL: ?state=<id>&t=<minutes>&theme=dark|light&w=<px>&lang=<code>&o.<key>=<value>
 //      ?embed=1 shows only the card (the gallery uses it).
 import { clock, applyTheme, makeHass, loadCard } from './hass.mjs';
 import { statesAt, startTime } from './scenario.mjs';
@@ -22,12 +22,39 @@ const fmtOff = (ms) => {
 };
 const ago = (ms) => { const m = Math.round(ms / 6e4); return m < 60 ? `${m} min` : m < 2880 ? `${Math.floor(m / 60)} h ${pad(m % 60)} min` : `${Math.round(m / 1440)} d`; };
 
+// preview.options from widget.yaml: chips that override one config key.
+// A pick that equals what the state already uses clears the override.
+const OPTS = W.options || [];
+function readOpts() {
+  const o = {};
+  for (const opt of OPTS) {
+    const raw = q.get(`o.${opt.key}`);
+    const v = opt.values.find((x) => String(x.value) === raw);
+    if (v) o[opt.key] = v.value;
+  }
+  return o;
+}
+const stateValue = (opt) => (opt.key in ui.state.config ? ui.state.config[opt.key] : opt.default);
+const optValue = (opt) => (opt.key in ui.opts ? ui.opts[opt.key] : stateValue(opt));
+const config = () => ({ ...ui.state.config, ...ui.opts });
+
+// The card config as YAML, for the panel and the Copy button.
+function toYaml(v, ind = '') {
+  const scalar = (x) => (typeof x === 'string' && (/^[\w.\-/:]+$/.test(x) && !/^(true|false|null|yes|no|on|off|[\d.]+)$/i.test(x)) ? x : JSON.stringify(x));
+  return Object.entries(v).map(([k, x]) => {
+    if (Array.isArray(x)) return `${ind}${k}:\n${x.map((i) => `${ind}  - ${scalar(i)}`).join('\n')}`;
+    if (x !== null && typeof x === 'object') return `${ind}${k}:\n${toYaml(x, ind + '  ')}`;
+    return `${ind}${k}: ${scalar(x)}`;
+  }).join('\n');
+}
+
 const ui = {
   state: W.states.find((s) => s.id === q.get('state')) || W.states[0],
   theme: q.get('theme'),
   width: parseInt(q.get('w'), 10) || W.width,
   lang: W.languages.includes(q.get('lang')) ? q.get('lang') : null,
   off: (parseFloat(q.get('t')) || 0) * 6e4,
+  opts: readOpts(),   // card options picked in the bar, over the state's config
   speed: 60,       // preview minutes per real second
   playing: false,
 };
@@ -64,6 +91,11 @@ function layout() {
           ${W.languages.length > 1 ? `<div class="seg" id="lang" role="group" aria-label="Language">
             ${W.languages.map((c) => `<button data-v="${esc(c)}" lang="${esc(c)}">${esc(langName(c))}</button>`).join('')}</div>` : ''}
         </div>
+        ${OPTS.length ? `<div class="bar opts" id="opts">
+          ${OPTS.map((o, i) => `<div class="grp"><span>${esc(o.label)}</span><div class="seg" role="group" aria-label="${esc(o.label)}" data-opt="${i}">
+            ${o.values.map((v, j) => `<button data-i="${j}">${esc(v.label)}</button>`).join('')}</div></div>`).join('')}
+          <button class="btn ghost" id="optreset" hidden>Reset options</button>
+        </div>` : ''}
         <p class="desc" id="desc"></p>
         <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
         <div class="clock">
@@ -103,7 +135,7 @@ async function selectState(st) {
   try {
     await loadCard(W.script, W.tag);
     card = document.createElement(W.tag);
-    card.setConfig(structuredClone(st.config));
+    card.setConfig(structuredClone(config()));
     card.addEventListener('hass-more-info', (e) => log(`more-info → ${e.detail?.entityId}`));
     frame.appendChild(card);
   } catch (e) {
@@ -113,12 +145,31 @@ async function selectState(st) {
   if (!embed) {
     document.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-current', b.dataset.state === st.id));
     $('desc').textContent = st.description;
-    $('yaml').textContent = st.yaml;
+    showOpts();
     $('slider').max = st.span;
     $('events').innerHTML = st.timeline.length
       ? `<button data-at="0"><b>${hhmm(t0)}</b>Start</button>` + st.timeline.map((e) => `<button data-at="${e.off}"><b>${hhmm(t0 + e.off)}</b>${esc(e.note || e.at)}</button>`).join('')
       : '<span class="muted">No timeline in this state: move the clock to watch countdowns tick.</span>';
   }
+  update(true);
+}
+
+// The option chips and the config panel, after a state or an option changes.
+function showOpts() {
+  document.querySelectorAll('[data-opt]').forEach((g) => {
+    const opt = OPTS[+g.dataset.opt], cur = optValue(opt);
+    g.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', opt.values[+b.dataset.i].value === cur));
+  });
+  const reset = $('optreset'); if (reset) reset.hidden = !Object.keys(ui.opts).length;
+  $('yaml').textContent = `${toYaml(config())}\n`;
+}
+
+function pickOpt(opt, value) {
+  if (value === stateValue(opt)) delete ui.opts[opt.key]; else ui.opts[opt.key] = value;
+  if (card) {
+    try { card.setConfig(structuredClone(config())); } catch (e) { $('frame').innerHTML = `<div class="err">${esc(e.message)}</div>`; card = null; }
+  }
+  showOpts();
   update(true);
 }
 
@@ -172,6 +223,7 @@ function writeUrl() {
   if (ui.theme) p.set('theme', ui.theme);
   if (ui.width !== W.width) p.set('w', ui.width);
   if (ui.lang) p.set('lang', ui.lang);
+  for (const [k, v] of Object.entries(ui.opts)) p.set(`o.${k}`, v);
   const url = `?${p}`;
   if (url !== location.search) history.replaceState(null, '', url);
 }
@@ -196,6 +248,16 @@ function bind() {
   $('theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.theme = b.dataset.v === ui.state.theme ? null : b.dataset.v; update(); } });
   $('width').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.width = +b.dataset.v; update(); } });
   $('lang')?.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.lang = b.dataset.v === ui.state.language ? null : b.dataset.v; update(); } });
+  $('opts')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const opt = OPTS[+b.closest('[data-opt]').dataset.opt];
+    pickOpt(opt, opt.values[+b.dataset.i].value);
+  });
+  $('optreset')?.addEventListener('click', () => {
+    ui.opts = {};
+    if (card) card.setConfig(structuredClone(config()));
+    showOpts(); update(true);
+  });
   $('slider').addEventListener('input', (e) => { ui.off = +e.target.value; update(); });
   $('speed').addEventListener('change', (e) => { ui.speed = +e.target.value; });
   $('reset').addEventListener('click', () => { ui.off = 0; ui.playing = false; update(); });
@@ -208,7 +270,7 @@ function bind() {
   });
   $('events').addEventListener('click', (e) => { const b = e.target.closest('[data-at]'); if (b) { ui.off = +b.dataset.at; update(); } });
   $('copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(ui.state.yaml); log('config copied'); } catch { log('copy failed: select the text instead'); }
+    try { await navigator.clipboard.writeText($('yaml').textContent); log('config copied'); } catch { log('copy failed: select the text instead'); }
   });
 }
 

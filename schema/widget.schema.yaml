@@ -71,6 +71,31 @@ properties:
         items: { $ref: "#/definitions/language" }
       theme: { $ref: "#/definitions/theme" }
       clock: { $ref: "#/definitions/clock" }
+      options:
+        description: >
+          Card options the preview offers as chips next to theme and language.
+          A pick overrides the state's config, so any state can be seen with it.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [key, values]
+          properties:
+            key: { type: string, pattern: "^[a-z_][a-z0-9_]*$", description: "Config key" }
+            label: { type: string, description: "Group name; default: the key" }
+            values:
+              type: array
+              minItems: 2
+              items:
+                oneOf:
+                  - type: [string, number, boolean]
+                  - type: object
+                    additionalProperties: false
+                    required: [value]
+                    properties:
+                      value: { type: [string, number, boolean] }
+                      label: { type: string }
+            default: { type: [string, number, boolean], description: "What the card uses when the key is not set" }
   config:
     description: Card config shared by every state; `type` is added for you
     type: object

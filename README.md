@@ -59,6 +59,17 @@ states:
 pages look the same each day. `preview.languages` lists the languages the
 card speaks; the preview offers only those. The schema has the rest.
 
+`preview.options` lists card options the preview offers as chips (layout,
+align, gradient, …). A pick overrides that key in every state's config, goes
+into the URL (`o.align=center`) and shows in the config panel:
+
+```yaml
+preview:
+  options:
+    - { key: align, label: Align, default: left, values: [left, center, right] }
+    - { key: gradient, label: Gradient, default: false, values: [false, true] }
+```
+
 ## Layout checks
 
 `npm run test:render` opens every state, at the start and at each timeline

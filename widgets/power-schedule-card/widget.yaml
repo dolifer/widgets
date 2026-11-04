@@ -10,6 +10,14 @@ preview:
   language: uk
   languages: [uk, en]
   clock: "18:20"
+  options:
+    - { key: layout, label: Layout, default: stacked, values: [{ value: stacked, label: Top/bottom }, { value: horizontal, label: Side by side }] }
+    - { key: align, label: Align, default: left, values: [left, center, right] }
+    - { key: valign, label: Vertical, default: top, values: [top, center, bottom] }
+    - { key: show_now_icon, label: Now icon, default: true, values: [true, false] }
+    - { key: show_next_icon, label: Next icon, default: true, values: [true, false] }
+    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next icon }] }
+    - { key: gradient, label: Gradient, default: false, values: [false, true] }
 config:
   entity: binary_sensor.grid
   next_outage: sensor.next_outage
