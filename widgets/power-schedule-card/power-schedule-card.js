@@ -18,7 +18,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.3.0';
+  const VERSION = '1.4.0';
   const TAG = 'power-schedule-card';
 
   // ── text ───────────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@
     getGridOptions() { return { columns: 12, min_columns: 6, rows: 3 }; }
 
     connectedCallback() { this._timer = setInterval(() => { this._sig = ''; this._render(); }, 60000); }
-    disconnectedCallback() { clearInterval(this._timer); }
+    disconnectedCallback() { clearInterval(this._timer); this._ro?.disconnect(); }
 
     // ── reading the config ───────────────────────────────────────────────────
     _t(key, d) {
@@ -226,6 +226,23 @@
       }
     }
 
+    // gradient: the colour runs square to the seam, so the blend lies along
+    // the diagonal. The angle depends on the card's width, so it follows resizes.
+    _angle(horiz, height, seamL, seamR, seamT, seamB) {
+      const split = this.shadowRoot.querySelector('.split');
+      const set = () => {
+        const w = split.clientWidth; if (!w) return;
+        // Seam direction (dx, dy) in px; its normal (-dy, dx) points from now to next.
+        const [dx, dy] = horiz ? [(seamB - seamT) / 100 * w, height] : [w, seamR - seamL];
+        const [nx, ny] = horiz ? [dy, -dx] : [-dy, dx];
+        split.style.setProperty('--ga', `${(Math.atan2(nx, -ny) * 180 / Math.PI).toFixed(1)}deg`);
+      };
+      set();
+      this._ro?.disconnect();
+      this._ro = new ResizeObserver(set);
+      this._ro.observe(split);
+    }
+
     // ── render ───────────────────────────────────────────────────────────────
     _render() {
       if (!this.config || !this._hass) return;
@@ -260,10 +277,11 @@
       // Why the power is off, as a tag beside the title: scheduled, emergency or unscheduled.
       const why = reason ? `<span class="why">${esc(this._t(`reason_${reason}`))}</span>` : '';
 
-      let nextHtml = '';
+      let nextHtml = '', nextTint = nowColor;
       if (next) {
         const k = KINDS[next.kind];
         const nextColor = this._color(k.color);
+        nextTint = nextColor;
         let sub = k.sub ? this._t(k.sub) : '';
         let when = '';
         if (k.timed && next.at) {
@@ -274,7 +292,7 @@
         }
         const nextIcon = c.show_next_icon === false || seamIcon ? '' : this._icon(next.kind, nextColor, horiz ? 20 : 24);
         nextHtml = `
-          <div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : seamNow ? this._icon(nowIconKey, nowColor, 18) : horiz ? '→' : '↓'}</div>
+          ${c.seam_icon === 'none' ? '' : `<div class="seam" aria-hidden="true">${seamIcon ? this._icon(next.kind, nextColor, 18) : seamNow ? this._icon(nowIconKey, nowColor, 18) : horiz ? '→' : '↓'}</div>`}
           <div class="next a-${nextAlign} v-${nextValign}${c.show_next_icon === false || seamIcon ? '' : ' wi'}" data-more="${esc(next.entity)}" style="--tint:${nextColor}">
             ${horiz ? '' : nextIcon}
             <div class="nx">${horiz ? `<div class="lr">${nextIcon}<span class="lbl">${esc(this._t('next'))}</span></div>` : `<span class="lbl">${esc(this._t('next'))}</span>`}
@@ -293,7 +311,13 @@
       // "bottom" mean the card's edges; the "now" block lives above the seam's
       // highest point and the "next" block below its lowest.
       const BLOCK = 46, EDGE = 10, NEAR = 6;
-      const nowRoom = seamR, nextRoom = height - seamL;
+      // split: rise (low at the left, high at the right), fall (the mirror
+      // image) or straight. The rooms above and below stay the same.
+      const split = ['rise', 'fall', 'straight'].includes(c.split) ? c.split : 'rise';
+      const mid = Math.round((seamL + seamR) / 2);
+      const [sl, sr] = split === 'fall' ? [seamR, seamL] : split === 'straight' ? [mid, mid] : [seamL, seamR];
+      const [st, sb] = split === 'fall' ? [SEAM_H_BOTTOM, SEAM_H_TOP] : split === 'straight' ? [50, 50] : [SEAM_H_TOP, SEAM_H_BOTTOM];
+      const nowRoom = Math.min(sl, sr), nextRoom = height - Math.max(sl, sr);
       const padTop = valign === 'center' ? Math.max(EDGE, Math.floor((nowRoom - BLOCK) / 2))
         : valign === 'bottom' ? Math.max(EDGE, nowRoom - BLOCK - NEAR) : EDGE;
       const padBottom = nextValign === 'center' ? Math.max(EDGE, Math.floor((nextRoom - BLOCK) / 2))
@@ -304,17 +328,18 @@
       const titleRow = horiz ? title : `<div class="ttl">${title}${why}</div>`;
       const cls = ['split', horiz ? 'h' : '', next ? '' : 'solo', `al-${align}`, seamIcon || seamNow ? 'si' : '', c.gradient ? 'g' : '']
         .filter(Boolean).join(' ');
-      const geom = horiz ? `--seam-t:${SEAM_H_TOP}%;--seam-b:${SEAM_H_BOTTOM}%`
-        : `--seam-l:${seamL}px;--seam-r:${seamR}px;--pt:${padTop}px;--pb:${padBottom}px`;
+      const geom = horiz ? `--seam-t:${st}%;--seam-b:${sb}%`
+        : `--seam-l:${sl}px;--seam-r:${sr}px;--pt:${padTop}px;--pb:${padBottom}px`;
       this.shadowRoot.innerHTML = `<style>${CSS}</style>
         <ha-card>
-          <div class="${cls}" style="height:${height}px;--tint:${nowColor};${geom}">
+          <div class="${cls}" style="height:${height}px;--tint:${nowColor};--tint2:${nextTint};${geom}">
             <div class="now a-${align} v-${valign}${icon ? ' wi' : ''}" data-more="${esc(c.entity)}">${horiz ? '' : icon}<div class="txt">
               ${horiz ? `<div class="lr">${icon}<span class="lbl">${esc(this._t('now'))}</span></div>` : `<span class="lbl">${esc(this._t('now'))}</span>`}
               ${titleRow}<span class="sub">${esc(sinceTxt)}</span></div>${horiz ? why : ''}</div>
             ${nextHtml}
           </div>
         </ha-card>`;
+      if (c.gradient) this._angle(horiz, height, sl, sr, st, sb);
       this.shadowRoot.querySelectorAll('[data-more]').forEach((el) => {
         el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info',
           { detail: { entityId: el.dataset.more }, bubbles: true, composed: true })));
@@ -343,11 +368,20 @@
     .next { align-items:flex-end; padding-bottom:var(--pb, 10px); gap:10px;
       clip-path:polygon(0 var(--seam-l),100% var(--seam-r),100% 100%,0 100%);
       background:linear-gradient(color-mix(in srgb, var(--tint) 22%, transparent), color-mix(in srgb, var(--tint) 22%, transparent)), var(--bg) }
-    .g { --gd:to bottom }
-    .g .next { --gd:to top }
-    .g.h { --gd:to right }
-    .g.h .next { --gd:to left }
-    .g, .g .next { background:linear-gradient(var(--gd), color-mix(in srgb, var(--tint) 34%, transparent), color-mix(in srgb, var(--tint) 6%, transparent)), var(--bg) }
+    /* gradient: one wash across the card, square to the seam (--ga, set from
+       the card's size): each colour is deepest at its outer edge, fades toward
+       the seam, and the two meet in a soft glowing band along the diagonal. */
+    .g { --ga:180deg; --mid:color-mix(in srgb, color-mix(in srgb, var(--tint) 50%, var(--tint2)) 75%, white);
+      background:
+        linear-gradient(var(--ga), transparent 44%, color-mix(in srgb, var(--mid) 26%, transparent) 50%, transparent 56%),
+        linear-gradient(var(--ga),
+          color-mix(in srgb, var(--tint) 42%, transparent) 0%,
+          color-mix(in srgb, var(--tint) 16%, transparent) 47%,
+          color-mix(in srgb, var(--tint2) 16%, transparent) 53%,
+          color-mix(in srgb, var(--tint2) 42%, transparent) 100%),
+        var(--bg) }
+    .g.h { --ga:90deg }
+    .g .next { background:none }
     .txt, .nx { min-width:0 }
     .why { margin-left:auto; flex:none; align-self:flex-start; font-size:13px; line-height:20px; white-space:nowrap; color:var(--secondary-text-color) }
     .nx { flex:1 }
@@ -382,9 +416,9 @@
        title (up to two lines), the duration, and the reason or the time, all
        aligned together and moved together by valign. */
     .h .now, .h .next { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:0; padding:10px 14px }
-    .h .now { padding-right:calc(100% - var(--seam-b) + 8px) }
+    .h .now { padding-right:calc(100% - min(var(--seam-t), var(--seam-b)) + 8px) }
     .h.solo .now { padding-right:14px }
-    .h .next { padding-left:calc(var(--seam-t) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
+    .h .next { padding-left:calc(max(var(--seam-t), var(--seam-b)) + 8px); clip-path:polygon(var(--seam-t) 0,100% 0,100% 100%,var(--seam-b) 100%) }
     .h .txt, .h .nx { display:block; flex:none }
     .h .lr { display:flex; align-items:center; gap:6px; min-width:0 }
     .h .lr .ic { margin:0; flex:none }

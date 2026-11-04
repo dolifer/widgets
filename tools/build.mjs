@@ -44,6 +44,12 @@ export function checkWidget(dir, widget, validate) {
     if (v && v[1] !== widget.version) errs.push(`version ${widget.version} differs from VERSION '${v[1]}' in ${widget.script}`);
   }
   const langs = widget.preview?.languages || ['en'];
+  for (const [i, o] of (widget.preview?.options || []).entries()) {
+    for (const v of o.values) {
+      const hasSet = v !== null && typeof v === 'object' && v.set;
+      if (!hasSet && !o.key) errs.push(`preview/options/${i}: a value without set needs the option's key`);
+    }
+  }
   const ids = new Set();
   for (const st of widget.states) {
     if (ids.has(st.id)) errs.push(`states: id ${st.id} is used twice`);
@@ -106,14 +112,26 @@ ${body}
 `;
 }
 
+// A preview option as the page uses it: a label and chips, each chip a set of
+// config keys to apply. `key` + plain values is shorthand for one key per chip.
+const cap = (v) => (v === true ? 'On' : v === false ? 'Off' : String(v).charAt(0).toUpperCase() + String(v).slice(1));
+export function previewOption(o) {
+  const defaults = { ...(o.defaults || {}), ...(o.key && o.default !== undefined ? { [o.key]: o.default } : {}) };
+  const values = o.values.map((v) => {
+    if (v !== null && typeof v === 'object' && v.set) return { label: v.label || Object.values(v.set).map(cap).join(' '), set: v.set };
+    const val = v !== null && typeof v === 'object' ? v.value : v;
+    return { label: (typeof v === 'object' && v?.label) || cap(val), set: { [o.key]: val } };
+  });
+  return { label: o.label || o.key, defaults, values };
+}
+
 // What the preview page needs for one widget: the states with their config as YAML.
 function widgetData(w) {
   return {
     id: w.id, name: w.name, version: w.version, description: w.description || '', tag: w.tag, script: w.script,
     width: w.preview?.width || 420,
     languages: w.preview?.languages || ['en'],
-    options: (w.preview?.options || []).map((o) => ({ key: o.key, label: o.label || o.key, default: o.default ?? null,
-      values: o.values.map((v) => (v !== null && typeof v === 'object' ? { label: String(v.value), ...v } : { value: v, label: v === true ? 'On' : v === false ? 'Off' : String(v).charAt(0).toUpperCase() + String(v).slice(1) })) })),
+    options: (w.preview?.options || []).map(previewOption),
     states: w.states.map((st) => {
       const scn = scenario(w, st);
       return { ...scn, yaml: yaml.dump(scn.config, { lineWidth: 100 }) };

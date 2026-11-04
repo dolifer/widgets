@@ -75,14 +75,17 @@ properties:
         description: >
           Card options the preview offers as chips next to theme and language.
           A pick overrides the state's config, so any state can be seen with it.
+          Either a key with plain values, or chips that each set several keys.
         type: array
         items:
           type: object
           additionalProperties: false
-          required: [key, values]
+          required: [values]
           properties:
-            key: { type: string, pattern: "^[a-z_][a-z0-9_]*$", description: "Config key" }
+            key: { type: string, pattern: "^[a-z_][a-z0-9_]*$", description: "Config key, for plain values" }
             label: { type: string, description: "Group name; default: the key" }
+            default: { type: [string, number, boolean], description: "What the card uses when the key is not set" }
+            defaults: { type: object, description: "What the card uses for each key a chip sets, when it is not set" }
             values:
               type: array
               minItems: 2
@@ -95,7 +98,12 @@ properties:
                     properties:
                       value: { type: [string, number, boolean] }
                       label: { type: string }
-            default: { type: [string, number, boolean], description: "What the card uses when the key is not set" }
+                  - type: object
+                    additionalProperties: false
+                    required: [set]
+                    properties:
+                      set: { type: object, minProperties: 1, description: "Config keys this chip sets" }
+                      label: { type: string }
   config:
     description: Card config shared by every state; `type` is added for you
     type: object

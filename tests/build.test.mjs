@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv from 'ajv';
-import { loadWidgets, checkWidget, loadSchema, build } from '../tools/build.mjs';
+import { loadWidgets, checkWidget, loadSchema, build, previewOption } from '../tools/build.mjs';
 import { offsetOf, statesAt, scenario, startTime } from '../tools/preview/scenario.mjs';
 import { parseTag, pack, zip } from '../tools/release.mjs';
 
@@ -145,4 +145,16 @@ test('zip holds the files, readable back', () => {
   const nameLen = buf.readUInt16LE(26), size = buf.readUInt32LE(18);
   assert.equal(buf.subarray(30, 30 + nameLen).toString(), 'a.js');
   assert.equal(zlib.inflateRawSync(buf.subarray(30 + nameLen, 30 + nameLen + size)).toString(), 'console.log(1)\n');
+});
+
+test('preview options: one key or a set of keys per chip', () => {
+  assert.deepEqual(previewOption({ key: 'gradient', label: 'Gradient', default: false, values: [false, true] }), {
+    label: 'Gradient', defaults: { gradient: false },
+    values: [{ label: 'Off', set: { gradient: false } }, { label: 'On', set: { gradient: true } }],
+  });
+  const icons = previewOption({ label: 'Icons', defaults: { a: true, b: true }, values: [{ label: 'Both', set: { a: true, b: true } }, { set: { a: false, b: false } }] });
+  assert.deepEqual(icons.values[0], { label: 'Both', set: { a: true, b: true } });
+  assert.equal(icons.values[1].label, 'Off Off');
+  const w = good(); w.preview = { options: [{ label: 'X', values: ['a', 'b'] }] };
+  assert.ok(tmpWidget(w).errs.some((e) => /needs the option's key/.test(e)));
 });

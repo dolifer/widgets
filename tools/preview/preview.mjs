@@ -27,15 +27,13 @@ const ago = (ms) => { const m = Math.round(ms / 6e4); return m < 60 ? `${m} min`
 const OPTS = W.options || [];
 function readOpts() {
   const o = {};
-  for (const opt of OPTS) {
-    const raw = q.get(`o.${opt.key}`);
-    const v = opt.values.find((x) => String(x.value) === raw);
-    if (v) o[opt.key] = v.value;
+  for (const opt of OPTS) for (const { set } of opt.values) for (const [k, v] of Object.entries(set)) {
+    if (q.get(`o.${k}`) === String(v)) o[k] = v;
   }
   return o;
 }
-const stateValue = (opt) => (opt.key in ui.state.config ? ui.state.config[opt.key] : opt.default);
-const optValue = (opt) => (opt.key in ui.opts ? ui.opts[opt.key] : stateValue(opt));
+const stateValue = (opt, k) => (k in ui.state.config ? ui.state.config[k] : opt.defaults[k]);
+const optValue = (opt, k) => (k in ui.opts ? ui.opts[k] : stateValue(opt, k));
 const config = () => ({ ...ui.state.config, ...ui.opts });
 
 // The card config as YAML, for the panel and the Copy button.
@@ -157,15 +155,16 @@ async function selectState(st) {
 // The option chips and the config panel, after a state or an option changes.
 function showOpts() {
   document.querySelectorAll('[data-opt]').forEach((g) => {
-    const opt = OPTS[+g.dataset.opt], cur = optValue(opt);
-    g.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', opt.values[+b.dataset.i].value === cur));
+    const opt = OPTS[+g.dataset.opt];
+    g.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed',
+      Object.entries(opt.values[+b.dataset.i].set).every(([k, v]) => optValue(opt, k) === v)));
   });
   const reset = $('optreset'); if (reset) reset.hidden = !Object.keys(ui.opts).length;
   $('yaml').textContent = `${toYaml(config())}\n`;
 }
 
-function pickOpt(opt, value) {
-  if (value === stateValue(opt)) delete ui.opts[opt.key]; else ui.opts[opt.key] = value;
+function pickOpt(opt, set) {
+  for (const [k, v] of Object.entries(set)) { if (v === stateValue(opt, k)) delete ui.opts[k]; else ui.opts[k] = v; }
   if (card) {
     try { card.setConfig(structuredClone(config())); } catch (e) { $('frame').innerHTML = `<div class="err">${esc(e.message)}</div>`; card = null; }
   }
@@ -251,7 +250,7 @@ function bind() {
   $('opts')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-i]'); if (!b) return;
     const opt = OPTS[+b.closest('[data-opt]').dataset.opt];
-    pickOpt(opt, opt.values[+b.dataset.i].value);
+    pickOpt(opt, opt.values[+b.dataset.i].set);
   });
   $('optreset')?.addEventListener('click', () => {
     ui.opts = {};

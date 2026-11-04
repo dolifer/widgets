@@ -98,7 +98,8 @@ template:
 | `layout` | `stacked` | `stacked`: now on top, next below. `horizontal`: now on the left, next on the right |
 | `align` | `left` | Where the "now" text sits across its half: `left`, `center` or `right`. The "next" text mirrors it (left ↔ right) so the two balance across the card |
 | `valign` | `top` | Where the "now" text sits up and down its half: `top`, `center` or `bottom`. The "next" text mirrors it (top ↔ bottom) |
-| `seam_icon` | `arrow` | `next` or `now` shows that half's icon in the centre circle instead of the arrow (that half then has no icon of its own) |
+| `seam_icon` | `arrow` | The centre circle: `arrow`, `next` or `now` (that half's icon moves into the circle and the half drops its own), or `none` for no circle |
+| `split` | `rise` | The line between the halves: `rise` (diagonal, low on the left), `fall` (the other diagonal) or `straight` |
 | `gradient` | `false` | `true` fades each half's colour from its outer edge toward the seam instead of a flat tint |
 | `language` | `auto` | `auto` (your HA language), `en` or `uk` |
 | `labels` | — | Replace any text: `now`, `next`, `power_on`, `power_off`, `power_unknown`, `since`, `in`, `soon`, `late`, `time_unknown`, `outage`, `restore`, `overdue`, `clear`, `emergency`, `unscheduled`, `no_schedule`, `unknown`, `outage_unknown`, `reason_planned`, `reason_emergency`, `reason_unscheduled`, `reason_unknown`, `h`, `min`. In `since` and `in`, `{d}` is the duration. |

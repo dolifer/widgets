@@ -1,5 +1,5 @@
 name: Power schedule
-version: 1.3.0
+version: 1.4.0
 description: >
   Whether the power is on now and why it is off, and what the outage schedule
   says comes next: an outage or the power coming back, with a countdown.
@@ -14,9 +14,15 @@ preview:
     - { key: layout, label: Layout, default: stacked, values: [{ value: stacked, label: Top/bottom }, { value: horizontal, label: Side by side }] }
     - { key: align, label: Align, default: left, values: [left, center, right] }
     - { key: valign, label: Vertical, default: top, values: [top, center, bottom] }
-    - { key: show_now_icon, label: Now icon, default: true, values: [true, false] }
-    - { key: show_next_icon, label: Next icon, default: true, values: [true, false] }
-    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: now, label: Now icon }, { value: next, label: Next icon }] }
+    - label: Icons
+      defaults: { show_now_icon: true, show_next_icon: true }
+      values:
+        - { label: Both, set: { show_now_icon: true, show_next_icon: true } }
+        - { label: Now, set: { show_now_icon: true, show_next_icon: false } }
+        - { label: Next, set: { show_now_icon: false, show_next_icon: true } }
+        - { label: None, set: { show_now_icon: false, show_next_icon: false } }
+    - { key: seam_icon, label: Centre, default: arrow, values: [{ value: arrow, label: Arrow }, { value: next, label: Next }, { value: now, label: Now }, { value: none, label: None }] }
+    - { key: split, label: Split, default: rise, values: [{ value: rise, label: ╱ Rise }, { value: fall, label: ╲ Fall }, { value: straight, label: ― Straight }] }
     - { key: gradient, label: Gradient, default: false, values: [false, true] }
 config:
   entity: binary_sensor.grid
@@ -359,6 +365,34 @@ states:
           binary_sensor.grid: "on"
           sensor.next_outage: now+6h
           sensor.next_restore: unknown
+
+  - id: split-fall
+    title: Diagonal the other way (split fall)
+    config:
+      split: fall
+    entities:
+      binary_sensor.grid: { state: "on", changed: now-1h04m }
+      sensor.next_outage: now+1h40m
+      sensor.next_restore: unknown
+    timeline:
+      - at: now+1h40m
+        note: Outage starts
+        set:
+          binary_sensor.grid: "off"
+          sensor.next_outage: unknown
+          sensor.next_restore: now+4h
+
+  - id: split-straight-side
+    title: Straight split, side by side, gradient
+    config:
+      split: straight
+      layout: horizontal
+      gradient: true
+    entities:
+      binary_sensor.grid: { state: "off", changed: now-30m }
+      sensor.next_outage: unknown
+      sensor.next_restore: now+2h30m
+    expect: [Немає світла, за графіком, Світло буде]
 
   - id: horizontal-centered
     title: Side by side, centred, next icon in the centre
